@@ -1,4 +1,4 @@
-# Claim App — Class Action Claim Finder & Auto-Filer
+# Settler — Class Action Claim Finder & Auto-Filer
 
 ## Context
 
