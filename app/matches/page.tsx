@@ -26,6 +26,7 @@ import {
   fetchPurchases,
   toMatchView,
   matchPayoutMid,
+  createClaim,
   type MatchView,
 } from "@/lib/api";
 import { usd } from "@/lib/utils";
@@ -99,6 +100,9 @@ export default function MatchesPage() {
     const current = deck[index];
     if (current && dir === "right") {
       setQueued((q) => (q.includes(current.id) ? q : [...q, current.id]));
+      // Queue + prepare the claim server-side (autofill + link discovery). Fire
+      // and forget — the claims tab shows it once discovery completes.
+      void createClaim(current.id).catch(() => {});
     }
     if (current) {
       setHistory((h) => [...h, { matchId: current.id, decision: dir }]);
