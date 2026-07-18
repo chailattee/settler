@@ -44,3 +44,8 @@ next-env.d.ts
 # local auth db & secrets
 /data/*.db
 .env.local
+
+# agent config & installed skills (local tooling, not committed)
+.claude/
+.agents/
+skills-lock.json
