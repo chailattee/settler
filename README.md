@@ -2,7 +2,7 @@
 
 ## Context
 
-Hackathon project (empty repo `ramp2026`). Billions in class-action settlement money goes unclaimed because people don't know they're eligible and filing is tedious. Build an app that: discovers open settlements, extracts eligibility rules with AI, matches them against the user's uploaded receipts/statements, lets the user verify matches via a Tinder-style swipe deck, then uses browser automation (OpenAI computer use) to fill the official claim form — **always stopping at the certification/attest page for human review** (claims are signed under penalty of perjury; the human must attest and submit).
+Billions in class-action settlement money goes unclaimed because people don't know they're eligible and filing is tedious. Build an app that: discovers open settlements, extracts eligibility rules with AI, matches them against the user's uploaded receipts/statements, lets the user verify matches via a Tinder-style swipe deck, then uses browser automation (OpenAI computer use) to fill the official claim form — **always stopping at the certification/attest page for human review** (claims are signed under penalty of perjury; the human must attest and submit).
 
 Decisions made with user: **Next.js web app · automatic Gmail scan as primary evidence source (receipt upload as fallback) · swipe-deck verification UX · curated real settlements + one fake settlement with a local mock claim site so the full filing flow can be demoed live and safely.**
 
