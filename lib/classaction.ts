@@ -199,14 +199,22 @@ export async function courtListenerMatches(
     return [];
   }
 
+  // Classify every candidate case in parallel (bounded globally by the LLM
+  // limiter) rather than one at a time.
+  const classified = await Promise.all(
+    cases.map(async (c) => {
+      try {
+        return { c, cls: await classifyCase(brand, item, c, today) };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
   const out: ClassActionMatch[] = [];
-  for (const c of cases) {
-    let cls: Classification;
-    try {
-      cls = await classifyCase(brand, item, c, today);
-    } catch {
-      continue;
-    }
+  for (const r of classified) {
+    if (!r) continue;
+    const { c, cls } = r;
     // Keep genuine, relevant consumer class actions that a buyer could join and
     // that carry some claim potential.
     if (

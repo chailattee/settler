@@ -174,13 +174,13 @@ export async function webMatches(
   }
   if (results.length === 0) return [];
 
-  // Scrape the top few results for depth (Firecrawl optional); fall back to
-  // Brave snippets when the scraper isn't configured.
-  let context = "";
-  for (const r of results.slice(0, 3)) {
-    const md = await firecrawlScrape(r.url);
-    context += `\n\n## ${r.title} (${r.url})\n${md || r.description}`;
-  }
+  // Scrape the top few results for depth in parallel (Firecrawl optional);
+  // fall back to Brave snippets when the scraper isn't configured.
+  const top = results.slice(0, 3);
+  const scraped = await Promise.all(top.map((r) => firecrawlScrape(r.url).catch(() => "")));
+  const context = top
+    .map((r, i) => `\n\n## ${r.title} (${r.url})\n${scraped[i] || r.description}`)
+    .join("");
 
   let parsed: { lawsuits: WebLawsuit[] };
   try {
