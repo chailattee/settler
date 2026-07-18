@@ -10,11 +10,28 @@ import { auth } from "@/lib/auth";
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
-/** Search query that targets receipts / order confirmations without dumping the
- *  whole inbox. Kept broad enough to catch major merchants. */
-export const RECEIPT_QUERY =
-  'subject:(receipt OR "order confirmation" OR "your order" OR invoice OR "order #") ' +
-  'OR from:(orders OR receipts OR no-reply OR noreply OR auto-confirm)';
+/** Search query that targets purchases without dumping the whole inbox.
+ *
+ *  `category:purchases` is Gmail's own ML classification of order/receipt/
+ *  shipping emails — by far the highest-signal source. The keyword and sender
+ *  clauses are recall fallbacks for anything Gmail didn't categorise. We bias
+ *  toward recall (catch more) because the LLM extractor drops non-purchases
+ *  downstream (isPurchase=false). */
+export const RECEIPT_QUERY = [
+  "category:purchases",
+  'subject:(receipt OR invoice OR "order confirmation" OR "your order" OR "order #" ' +
+    'OR "order placed" OR "order number" OR purchase OR payment OR transaction OR shipped ' +
+    'OR "your invoice" OR "tax invoice" OR "thank you for your order" OR "thanks for your order" ' +
+    'OR "your receipt" OR "payment received" OR "you paid" OR "items found" OR "order delivered")',
+  "from:(orders OR receipts OR noreply OR no-reply OR auto-confirm OR invoice OR billing OR store OR shop)",
+  // Major US retailers / marketplaces / delivery services — these send the
+  // itemised receipts we care about (Instacart/Walmart/DoorDash list products).
+  "from:(instacart OR walmart OR doordash OR amazon OR target OR costco OR kroger " +
+    'OR "uber eats" OR ubereats OR grubhub OR shipt OR chewy OR "best buy" OR bestbuy ' +
+    "OR apple OR paypal OR ebay OR etsy OR wholefoods OR safeway OR cvs OR walgreens " +
+    "OR homedepot OR lowes OR wayfair OR nike OR sephora OR ulta)",
+  "has:attachment filename:(pdf OR receipt OR invoice)",
+].join(" OR ");
 
 export interface GmailMessage {
   id: string;
@@ -48,8 +65,9 @@ async function gfetch(token: string, path: string): Promise<Response> {
   });
 }
 
-/** List message ids matching the receipt query, capped at `max`. */
-export async function listReceiptIds(token: string, max = 60): Promise<string[]> {
+/** List message ids matching the receipt query, capped at `max`. Pages through
+ *  results (Gmail returns up to 100 ids per page) until `max` is reached. */
+export async function listReceiptIds(token: string, max = 200): Promise<string[]> {
   const ids: string[] = [];
   let pageToken = "";
   while (ids.length < max) {
@@ -133,7 +151,7 @@ export async function getMessage(token: string, id: string): Promise<GmailMessag
 }
 
 /** Full scan: list receipt ids then fetch each message (bounded concurrency). */
-export async function scanReceipts(token: string, max = 40): Promise<GmailMessage[]> {
+export async function scanReceipts(token: string, max = 200): Promise<GmailMessage[]> {
   const ids = await listReceiptIds(token, max);
   const out: GmailMessage[] = [];
   const concurrency = 5;

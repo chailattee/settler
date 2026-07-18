@@ -5,7 +5,7 @@ import { UploadCloud, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Fallback evidence path: drag-and-drop receipts/statements. Visual only in
- *  the hackathon build — files are listed but not uploaded to a backend. */
+ *  the hackathon build; files are listed but not uploaded to a backend. */
 export function UploadDropzone({ className }: { className?: string }) {
   const [dragging, setDragging] = React.useState(false);
   const [files, setFiles] = React.useState<{ name: string; size: number }[]>(
@@ -52,7 +52,7 @@ export function UploadDropzone({ className }: { className?: string }) {
           Drop receipts &amp; statements here
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          PDF, PNG, JPG, or CSV — or click to browse
+          PDF, PNG, JPG, or CSV, or click to browse
         </p>
         <input
           ref={inputRef}

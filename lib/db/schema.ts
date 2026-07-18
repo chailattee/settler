@@ -46,6 +46,8 @@ export const classActionMatches = pgTable(
     court: text("court").notNull().default(""),
     active: boolean("active").notNull().default(true),
     confidence: doublePrecision("confidence").notNull().default(0),
+    claimPotential: doublePrecision("claim_potential").notNull().default(0),
+    stage: text("stage").notNull().default("unknown"),
     claimUrl: text("claim_url"),
     summary: text("summary").notNull().default(""),
     payoutLow: doublePrecision("payout_low").notNull().default(0),

@@ -80,6 +80,11 @@ const DISCOVER_SCHEMA = {
             url: { type: "string" },
             claimUrl: { type: ["string", "null"] },
             active: { type: "boolean" },
+            stage: {
+              type: "string",
+              enum: ["settlement_open", "settlement_upcoming", "ongoing", "resolved", "unknown"],
+            },
+            claimPotential: { type: "number" },
             summary: { type: "string" },
             confidence: { type: "number" },
             whyQualified: { type: "array", items: { type: "string" } },
@@ -93,6 +98,8 @@ const DISCOVER_SCHEMA = {
             "url",
             "claimUrl",
             "active",
+            "stage",
+            "claimPotential",
             "summary",
             "confidence",
             "whyQualified",
@@ -113,6 +120,8 @@ interface WebLawsuit {
   url: string;
   claimUrl: string | null;
   active: boolean;
+  stage: "settlement_open" | "settlement_upcoming" | "ongoing" | "resolved" | "unknown";
+  claimPotential: number;
   summary: string;
   confidence: number;
   whyQualified: string[];
@@ -123,17 +132,24 @@ interface WebLawsuit {
 }
 
 const DISCOVER_SYSTEM =
-  "You find class-action lawsuits and settlements relevant to a specific " +
-  "purchased product, from web search results / scraped pages. Return ONLY " +
-  "genuine consumer class actions or settlements about this brand+product " +
-  "(ignore unrelated cases, patent/employment suits, and generic legal-ad " +
-  "pages with no real case). For each: title, the source url, the official " +
-  "claim-filing url (or null), whether it's still active/accepting claims, a " +
-  "one-line summary, a 0..1 confidence it's relevant to the purchase, bullet " +
-  "reasons the buyer might qualify, uncertainties, an individual payout low/" +
-  "high estimate in USD (0 if unknown), and the claim deadline (ISO date or " +
-  "null). Return an empty list if nothing relevant is found. Do not invent " +
-  "cases or claim URLs.";
+  "You find consumer class actions/settlements relevant to a specific purchased " +
+  "product where the buyer could CLAIM money — from web search results / scraped " +
+  "pages. Prioritise settlements with an OPEN or UPCOMING claims window over " +
+  "old, closed cases. Return ONLY genuine consumer cases about this brand+" +
+  "product (ignore unrelated cases, patent/employment suits, and generic " +
+  "legal-ad pages with no real case). For each return:\n" +
+  "- title, url (source), claimUrl (official claim-filing site or null)\n" +
+  "- active (still accepting claims), stage ('settlement_open' = claims open " +
+  "now, 'settlement_upcoming' = settlement pending/proposed, 'ongoing' = active " +
+  "suit no settlement yet, 'resolved' = closed, 'unknown')\n" +
+  "- claimPotential (0..1): realistic likelihood THIS buyer can claim a current " +
+  "or future payout (near 1 for open settlements matching the product, near 0 " +
+  "for closed/off-target)\n" +
+  "- confidence (0..1 relevant to the purchase), summary, whyQualified, " +
+  "uncertainties, payoutLow/High in USD (0 if unknown), deadline (ISO date or " +
+  "null).\n" +
+  "Return an empty list if nothing relevant. Never invent cases, claim URLs, or " +
+  "deadlines.";
 
 /** Discover class actions for one brand/item via web search. */
 export async function webMatches(
@@ -145,7 +161,11 @@ export async function webMatches(
   const { minConfidence = 0.5 } = opts;
   if (!braveConfigured()) return [];
 
-  const query = `${brand} ${item} class action lawsuit settlement claim`;
+  // Bias the query toward open, claimable settlements and the sites that track
+  // them (settlement administrators + class-action trackers).
+  const query =
+    `${brand} ${item} class action settlement claim ` +
+    `("open settlement" OR "how to claim" OR "claim form" OR "class members" OR proof of purchase)`;
   let results: WebResult[];
   try {
     results = await braveSearch(query, 6);
@@ -179,7 +199,7 @@ export async function webMatches(
   }
 
   return parsed.lawsuits
-    .filter((l) => l.confidence >= minConfidence && l.title && l.url)
+    .filter((l) => l.confidence >= minConfidence && l.claimPotential > 0.1 && l.title && l.url)
     .map((l) => ({
       purchaseIds,
       brand,
@@ -190,6 +210,8 @@ export async function webMatches(
       court: "",
       active: l.active,
       confidence: l.confidence,
+      claimPotential: l.claimPotential,
+      stage: l.stage,
       whyQualified: l.whyQualified,
       uncertainties: l.uncertainties,
       claimUrl: l.claimUrl,

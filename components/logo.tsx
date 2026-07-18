@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ScanSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Logo({
@@ -12,16 +11,16 @@ export function Logo({
   return (
     <Link
       href={href}
-      className={cn(
-        "inline-flex items-center gap-2 font-semibold tracking-tight",
-        className,
-      )}
+      className={cn("inline-flex items-center gap-2", className)}
       aria-label="Settlers home"
     >
-      <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-        <ScanSearch className="size-5" />
+      <span
+        aria-hidden="true"
+        className="grid size-8 place-items-center rounded-lg bg-primary text-base shadow-coin"
+      >
+        🧭
       </span>
-      <span className="text-lg">Settlers</span>
+      <span className="font-brand text-2xl leading-none">Settlers</span>
     </Link>
   );
 }

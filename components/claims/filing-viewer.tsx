@@ -101,7 +101,7 @@ export function FilingViewer({
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">
-              Filed — confirmation on its way
+              Filed. Confirmation on its way
             </p>
             <p className="text-xs text-muted-foreground">
               You signed and submitted this claim. Watch your inbox for the
@@ -154,7 +154,7 @@ export function FilingViewer({
             </dl>
           ) : (
             <p className="py-2 text-sm text-muted-foreground">
-              Nothing entered yet — fields appear here as the agent fills them.
+              Nothing entered yet. Fields appear here as the agent fills them.
             </p>
           )}
         </CardContent>

@@ -33,7 +33,7 @@ export function ApprovalGate({ settlement }: { settlement?: Settlement }) {
           </h3>
           <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted-foreground">
             The agent reached the certification page and filled every field. It
-            will not attest or submit on your behalf — that form is signed{" "}
+            will not attest or submit on your behalf. That form is signed{" "}
             <span className="font-medium text-foreground">
               under penalty of perjury
             </span>

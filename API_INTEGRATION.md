@@ -53,7 +53,7 @@ Request body (all optional):
 ```jsonc
 {
   "demo": false,        // true (or no Gmail connection) => canned purchases
-  "maxEmails": 30,      // Gmail scan cap
+  "maxEmails": 200,     // Gmail scan cap (default 200)
   "minConfidence": 0.5  // threshold to keep a match (both sources)
 }
 ```
@@ -84,13 +84,19 @@ From `lib/events.ts` (`AgentEvent`). Render these as the live feed:
 | `gmail_scanning` | `{ scanned, total }`                                                                              | Progress bar while reading emails           |
 | `purchase_found` | `{ purchase }` (`PurchaseRecord & { brand }`)                                                     | A parsed purchase — add a card              |
 | `brand_lookup`   | `{ brand, message }`                                                                              | "Searching CourtListener + web for …"       |
-| `match`          | `{ brand, source, title, url, claimUrl, active, confidence, summary, whyQualified, uncertainties }` | A relevant class-action lawsuit ✅          |
+| `match`          | `{ brand, source, title, url, claimUrl, active, stage, claimPotential, confidence, summary, whyQualified, uncertainties }` | A claimable class-action lawsuit ✅         |
 | `done`           | `{ purchases, matches }`                                                                          | Run complete                                |
 | `error`          | `{ message }`                                                                                     | Something failed — stream then closes       |
 
 `source` is `"courtlistener"` (a court docket) or `"web"` (a settlement/news page
 found via Brave). Web-sourced matches usually carry a `claimUrl` and payout
 estimate; CourtListener matches carry `court` and the docket `url`.
+
+Matches are ranked by **`claimPotential`** (0..1 — likelihood the buyer can claim
+a current/future settlement), then `confidence`. **`stage`** is one of
+`settlement_open` (claims open now), `settlement_upcoming`, `ongoing` (active
+suit, no settlement yet), `resolved` (closed), or `unknown` — use it to badge
+"Claim open" vs "watch". Resolved/closed cases are kept but sink to the bottom.
 
 ---
 

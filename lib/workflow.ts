@@ -25,28 +25,36 @@ export interface WorkflowOpts {
 }
 
 export async function runWorkflow(emit: Emit, opts: WorkflowOpts): Promise<void> {
-  const { userId, token, maxEmails = 30, minConfidence = 0.5 } = opts;
+  const { userId, token, maxEmails = 200, minConfidence = 0.5 } = opts;
 
   // 1. Gmail scan --------------------------------------------------------
   emit({ type: "status", step: "gmail", message: "Scanning your inbox for receipts…" });
   const ids = await listReceiptIds(token, maxEmails);
   emit({ type: "status", step: "gmail", message: `Found ${ids.length} receipt-like emails.` });
 
-  // 2. Extraction --------------------------------------------------------
+  // 2. Extraction (bounded concurrency so 100 emails stays fast) ----------
   const purchases: BrandPurchase[] = [];
-  for (let i = 0; i < ids.length; i++) {
-    const msg = await getMessage(token, ids[i]);
-    emit({ type: "gmail_scanning", scanned: i + 1, total: ids.length });
-    if (!msg) continue;
-    let found: BrandPurchase[] = [];
-    try {
-      found = await extractFromEmail(msg);
-    } catch {
-      continue;
-    }
-    for (const p of found) {
-      purchases.push(p);
-      emit({ type: "purchase_found", purchase: p });
+  const CONCURRENCY = 8;
+  let scanned = 0;
+  for (let i = 0; i < ids.length; i += CONCURRENCY) {
+    const batch = ids.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (id) => {
+        const msg = await getMessage(token, id);
+        if (!msg) return [] as BrandPurchase[];
+        try {
+          return await extractFromEmail(msg);
+        } catch {
+          return [] as BrandPurchase[];
+        }
+      }),
+    );
+    for (const found of results) {
+      emit({ type: "gmail_scanning", scanned: ++scanned, total: ids.length });
+      for (const p of found) {
+        purchases.push(p);
+        emit({ type: "purchase_found", purchase: p });
+      }
     }
   }
 
@@ -83,7 +91,11 @@ function dedupe(matches: ClassActionMatch[]): ClassActionMatch[] {
       seen.set(key, m);
     }
   }
-  return [...seen.values()].sort((a, b) => b.confidence - a.confidence);
+  // Rank by claim potential first (a claimable settlement beats an early-stage
+  // suit), then by relevance confidence.
+  return [...seen.values()].sort(
+    (a, b) => b.claimPotential - a.claimPotential || b.confidence - a.confidence,
+  );
 }
 
 /** The per-product class-action lookup half of the pipeline (CourtListener +
@@ -100,38 +112,50 @@ export async function matchPurchases(
   );
 
   const all: ClassActionMatch[] = [];
+  const groups = [...groupByBrand(purchases).values()];
+  const sources = braveConfigured() ? "CourtListener + web" : "CourtListener";
 
-  for (const [, group] of groupByBrand(purchases)) {
-    const brand = group[0].brand || group[0].merchant;
-    const item = group.map((p) => p.item).join(", ");
-    const purchaseIds = group.map((p) => p.id);
+  // Analyse brands in parallel (bounded) instead of one at a time — a grocery
+  // order can yield dozens of distinct brands, and each brand's lookup is
+  // independent. Each brand still runs its two discovery sources concurrently.
+  const BRAND_CONCURRENCY = 4;
+  for (let i = 0; i < groups.length; i += BRAND_CONCURRENCY) {
+    const batch = groups.slice(i, i + BRAND_CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(async (group) => {
+        const brand = group[0].brand || group[0].merchant;
+        const item = group.map((p) => p.item).join(", ");
+        const purchaseIds = group.map((p) => p.id);
 
-    const sources = braveConfigured() ? "CourtListener + web" : "CourtListener";
-    emit({ type: "brand_lookup", brand, message: `Searching ${sources} for “${item}”…` });
+        emit({ type: "brand_lookup", brand, message: `Searching ${sources} for “${item}”…` });
 
-    // Run both discovery sources in parallel.
-    const [clMatches, wMatches] = await Promise.all([
-      courtListenerMatches(brand, item, purchaseIds, { minConfidence }),
-      webMatches(brand, item, purchaseIds, { minConfidence }),
-    ]);
+        const [clMatches, wMatches] = await Promise.all([
+          courtListenerMatches(brand, item, purchaseIds, { minConfidence }),
+          webMatches(brand, item, purchaseIds, { minConfidence }),
+        ]);
 
-    const merged = dedupe([...clMatches, ...wMatches]);
-    for (const m of merged) {
-      all.push(m);
-      emit({
-        type: "match",
-        brand: m.brand,
-        source: m.source,
-        title: m.title,
-        url: m.url,
-        claimUrl: m.claimUrl,
-        active: m.active,
-        confidence: m.confidence,
-        summary: m.summary,
-        whyQualified: m.whyQualified,
-        uncertainties: m.uncertainties,
-      });
-    }
+        const merged = dedupe([...clMatches, ...wMatches]);
+        for (const m of merged) {
+          emit({
+            type: "match",
+            brand: m.brand,
+            source: m.source,
+            title: m.title,
+            url: m.url,
+            claimUrl: m.claimUrl,
+            active: m.active,
+            stage: m.stage,
+            claimPotential: m.claimPotential,
+            confidence: m.confidence,
+            summary: m.summary,
+            whyQualified: m.whyQualified,
+            uncertainties: m.uncertainties,
+          });
+        }
+        return merged;
+      }),
+    );
+    for (const merged of batchResults) all.push(...merged);
   }
 
   const matches = dedupe(all);

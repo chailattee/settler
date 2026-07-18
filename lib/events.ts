@@ -24,6 +24,10 @@ export type AgentEvent =
       /** Official claim-filing site, if known (mainly web-sourced). */
       claimUrl: string | null;
       active: boolean;
+      /** Claim stage: settlement_open | settlement_upcoming | ongoing | resolved | unknown. */
+      stage: string;
+      /** 0..1 likelihood the buyer can claim a current/future settlement. */
+      claimPotential: number;
       confidence: number;
       summary: string;
       whyQualified: string[];

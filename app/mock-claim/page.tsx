@@ -307,7 +307,7 @@ function StepOne({
     <div>
       <h2 className="font-serif text-lg font-semibold text-neutral-900 flex items-center gap-2">
         <FileText className="h-5 w-5 text-slate-600" />
-        Part I — Claimant Contact Information
+        Part I: Claimant Contact Information
       </h2>
       <p className="mt-1 text-xs text-neutral-500">
         Provide the name and mailing address of the settlement class member.
@@ -378,7 +378,7 @@ function StepTwo({
     <div>
       <h2 className="font-serif text-lg font-semibold text-neutral-900 flex items-center gap-2">
         <FileText className="h-5 w-5 text-slate-600" />
-        Part II — Purchase &amp; Eligibility Details
+        Part II: Purchase &amp; Eligibility Details
       </h2>
       <p className="mt-1 text-xs text-neutral-500">
         Identify the transaction giving rise to your claim. Your Member ID
@@ -435,7 +435,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between gap-4 py-1.5 border-b border-neutral-200 last:border-b-0">
       <dt className="text-neutral-500">{label}</dt>
       <dd className="text-right font-medium text-neutral-900">
-        {value || "—"}
+        {value || "n/a"}
       </dd>
     </div>
   );
@@ -460,7 +460,7 @@ function StepThree({
 
       <h2 className="font-serif text-lg font-semibold text-neutral-900 flex items-center gap-2">
         <ShieldAlert className="h-5 w-5 text-slate-700" />
-        Part III — Certification
+        Part III: Certification
       </h2>
 
       {/* Prominent certification notice */}

@@ -53,7 +53,7 @@ export function ConnectGmailButton({
       onClick={handleClick}
       disabled={loading}
       className={cn(
-        "group inline-flex h-12 items-center justify-center gap-3 rounded-lg bg-primary px-6 text-base font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70",
+        "group inline-flex h-12 items-center justify-center gap-3 rounded-lg bg-primary px-6 text-base font-bold text-primary-foreground shadow-coin transition-all hover:-translate-y-px hover:bg-primary/90 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70",
         className,
       )}
     >

@@ -66,6 +66,9 @@ export interface SearchOpts {
   activeOnly?: boolean;
   /** Cap results after filtering. Default 10. */
   limit?: number;
+  /** Drop cases filed before this year (recent cases are likelier to have an
+   *  open/upcoming claims window). Default: 7 years ago. */
+  sinceYear?: number;
 }
 
 /** Search dockets whose case name contains `brand`. */
@@ -73,7 +76,7 @@ export async function searchClassActions(
   brand: string,
   opts: SearchOpts = {},
 ): Promise<ClassActionCase[]> {
-  const { activeOnly = true, limit = 10 } = opts;
+  const { activeOnly = true, limit = 10, sinceYear = new Date().getFullYear() - 7 } = opts;
   const clean = brand.trim();
   if (!clean) return [];
 
@@ -99,5 +102,11 @@ export async function searchClassActions(
   const data = (await res.json()) as { results?: RawResult[] };
   let cases = (data.results ?? []).map(normalize);
   if (activeOnly) cases = cases.filter((c) => c.active);
+  // Keep reasonably recent cases (unknown filing date is kept — let the screener
+  // judge it) so we don't surface decades-old, long-closed suits.
+  cases = cases.filter((c) => {
+    const y = c.dateFiled ? Number(c.dateFiled.slice(0, 4)) : NaN;
+    return Number.isNaN(y) || y >= sinceYear;
+  });
   return cases.slice(0, limit);
 }

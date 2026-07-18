@@ -7,7 +7,7 @@ export function Footer() {
         <div className="space-y-2">
           <Logo />
           <p className="max-w-xs text-sm text-muted-foreground">
-            Find the settlement money you&apos;re owed — and let us do the
+            Find the settlement money you&apos;re owed, and let us do the
             paperwork, right up to your signature.
           </p>
         </div>

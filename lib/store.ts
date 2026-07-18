@@ -25,6 +25,8 @@ export interface StoredMatch {
   court: string;
   active: boolean;
   confidence: number;
+  claim_potential: number;
+  stage: string;
   claim_url: string | null;
   summary: string;
   payout_low: number;
@@ -87,6 +89,8 @@ function toStoredMatch(userId: string, m: ClassActionMatch): StoredMatch {
     court: m.court,
     active: m.active,
     confidence: m.confidence,
+    claim_potential: m.claimPotential,
+    stage: m.stage,
     claim_url: m.claimUrl,
     summary: m.summary,
     payout_low: m.payoutLow,
@@ -110,6 +114,8 @@ function storedMatchToInsert(s: StoredMatch) {
     court: s.court,
     active: s.active,
     confidence: s.confidence,
+    claimPotential: s.claim_potential,
+    stage: s.stage,
     claimUrl: s.claim_url,
     summary: s.summary,
     payoutLow: s.payout_low,
@@ -133,6 +139,8 @@ function fromMatchRow(r: MatchRow): StoredMatch {
     court: r.court,
     active: r.active,
     confidence: r.confidence,
+    claim_potential: r.claimPotential,
+    stage: r.stage,
     claim_url: r.claimUrl ?? null,
     summary: r.summary,
     payout_low: r.payoutLow,
@@ -226,7 +234,7 @@ export async function getMatches(userId: string): Promise<StoredMatch[]> {
         .select()
         .from(classActionMatches)
         .where(eq(classActionMatches.userId, userId))
-        .orderBy(desc(classActionMatches.confidence));
+        .orderBy(desc(classActionMatches.claimPotential), desc(classActionMatches.confidence));
       return rows.map(fromMatchRow);
     } catch {
       /* fall through to memory */

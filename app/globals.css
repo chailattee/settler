@@ -3,42 +3,44 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.9777 0.0041 301.4256);
-  --foreground: oklch(0.3651 0.0325 287.0807);
-  --card: oklch(1.0000 0 0);
-  --card-foreground: oklch(0.3651 0.0325 287.0807);
-  --popover: oklch(1.0000 0 0);
-  --popover-foreground: oklch(0.3651 0.0325 287.0807);
-  --primary: oklch(0.6104 0.0767 299.7335);
-  --primary-foreground: oklch(0.9777 0.0041 301.4256);
-  --secondary: oklch(0.8957 0.0265 300.2416);
-  --secondary-foreground: oklch(0.3651 0.0325 287.0807);
-  --muted: oklch(0.8906 0.0139 299.7754);
-  --muted-foreground: oklch(0.5288 0.0375 290.7895);
-  --accent: oklch(0.7889 0.0802 359.9375);
-  --accent-foreground: oklch(0.3394 0.0441 1.7583);
-  --destructive: oklch(0.6332 0.1578 22.6734);
-  --destructive-foreground: oklch(0.9777 0.0041 301.4256);
-  --border: oklch(0.8447 0.0226 300.1421);
-  --input: oklch(0.9329 0.0124 301.2783);
-  --ring: oklch(0.6104 0.0767 299.7335);
-  --chart-1: oklch(0.6104 0.0767 299.7335);
-  --chart-2: oklch(0.7889 0.0802 359.9375);
-  --chart-3: oklch(0.7321 0.0749 169.8670);
-  --chart-4: oklch(0.8540 0.0882 76.8292);
-  --chart-5: oklch(0.7857 0.0645 258.0839);
-  --sidebar: oklch(0.9554 0.0082 301.3541);
-  --sidebar-foreground: oklch(0.3651 0.0325 287.0807);
-  --sidebar-primary: oklch(0.6104 0.0767 299.7335);
-  --sidebar-primary-foreground: oklch(0.9777 0.0041 301.4256);
-  --sidebar-accent: oklch(0.7889 0.0802 359.9375);
-  --sidebar-accent-foreground: oklch(0.3394 0.0441 1.7583);
-  --sidebar-border: oklch(0.8719 0.0198 302.1690);
-  --sidebar-ring: oklch(0.6104 0.0767 299.7335);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Lora", Georgia, serif;
-  --font-mono: var(--font-geist-mono), "Fira Code", "Courier New", monospace;
-  --radius: 0.5rem;
+  /* Parchment world: aged paper, ink, gold. The default surface. */
+  --background: #efe4c8;
+  --foreground: #2a2018;
+  --card: #f4ecd6;
+  --card-foreground: #2a2018;
+  --popover: #f4ecd6;
+  --popover-foreground: #2a2018;
+  --primary: #b0842f;
+  --primary-foreground: #211705;
+  --secondary: #e3d4ac;
+  --secondary-foreground: #2a2018;
+  --muted: #e5d8b4;
+  --muted-foreground: #8a7752;
+  --accent: #e9dcb8;
+  --accent-foreground: #12313a;
+  --destructive: #8a2f2a;
+  --destructive-foreground: #f4ecd6;
+  --border: #cbb98c;
+  --input: #cbb98c;
+  --ring: #b0842f;
+  --chart-1: #b0842f;
+  --chart-2: #12313a;
+  --chart-3: #2f7d3f;
+  --chart-4: #caa24a;
+  --chart-5: #7fa0a8;
+  --sidebar: #f4ecd6;
+  --sidebar-foreground: #2a2018;
+  --sidebar-primary: #b0842f;
+  --sidebar-primary-foreground: #211705;
+  --sidebar-accent: #e9dcb8;
+  --sidebar-accent-foreground: #12313a;
+  --sidebar-border: #cbb98c;
+  --sidebar-ring: #b0842f;
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fell-english), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains-mono), "Fira Code", "Courier New", monospace;
+  --font-brand: var(--font-pirata-one), var(--font-fell-english), Georgia, serif;
+  --radius: 0.625rem;
   --shadow-x: 1px;
   --shadow-y: 2px;
   --shadow-blur: 5px;
@@ -58,42 +60,44 @@
 }
 
 .dark {
-  --background: oklch(0.2166 0.0215 292.8474);
-  --foreground: oklch(0.9053 0.0245 293.5570);
-  --card: oklch(0.2544 0.0301 292.7315);
-  --card-foreground: oklch(0.9053 0.0245 293.5570);
-  --popover: oklch(0.2544 0.0301 292.7315);
-  --popover-foreground: oklch(0.9053 0.0245 293.5570);
-  --primary: oklch(0.7058 0.0777 302.0489);
-  --primary-foreground: oklch(0.2166 0.0215 292.8474);
-  --secondary: oklch(0.4604 0.0472 295.5578);
-  --secondary-foreground: oklch(0.9053 0.0245 293.5570);
-  --muted: oklch(0.2560 0.0320 294.8380);
-  --muted-foreground: oklch(0.6974 0.0282 300.0614);
-  --accent: oklch(0.3181 0.0321 308.6149);
-  --accent-foreground: oklch(0.8391 0.0692 2.6681);
-  --destructive: oklch(0.6875 0.1420 21.4566);
-  --destructive-foreground: oklch(0.2166 0.0215 292.8474);
-  --border: oklch(0.3063 0.0359 293.3367);
-  --input: oklch(0.2847 0.0346 291.2726);
-  --ring: oklch(0.7058 0.0777 302.0489);
-  --chart-1: oklch(0.7058 0.0777 302.0489);
-  --chart-2: oklch(0.8391 0.0692 2.6681);
-  --chart-3: oklch(0.7321 0.0749 169.8670);
-  --chart-4: oklch(0.8540 0.0882 76.8292);
-  --chart-5: oklch(0.7857 0.0645 258.0839);
-  --sidebar: oklch(0.1985 0.0200 293.6639);
-  --sidebar-foreground: oklch(0.9053 0.0245 293.5570);
-  --sidebar-primary: oklch(0.7058 0.0777 302.0489);
-  --sidebar-primary-foreground: oklch(0.2166 0.0215 292.8474);
-  --sidebar-accent: oklch(0.3181 0.0321 308.6149);
-  --sidebar-accent-foreground: oklch(0.8391 0.0692 2.6681);
-  --sidebar-border: oklch(0.2847 0.0346 291.2726);
-  --sidebar-ring: oklch(0.7058 0.0777 302.0489);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Lora", Georgia, serif;
-  --font-mono: var(--font-geist-mono), "Fira Code", "Courier New", monospace;
-  --radius: 0.5rem;
+  /* Navy world: deep sea, brightened gold, sea-muted text. */
+  --background: #12313a;
+  --foreground: #f0e5c8;
+  --card: #0e2831;
+  --card-foreground: #f0e5c8;
+  --popover: #0e2831;
+  --popover-foreground: #f0e5c8;
+  --primary: #caa24a;
+  --primary-foreground: #0a1f26;
+  --secondary: #1a3a44;
+  --secondary-foreground: #f0e5c8;
+  --muted: #17323b;
+  --muted-foreground: #a9c1c8;
+  --accent: #1a3a44;
+  --accent-foreground: #f0e5c8;
+  --destructive: #a5382f;
+  --destructive-foreground: #f0e5c8;
+  --border: #1a3a44;
+  --input: #1a3a44;
+  --ring: #caa24a;
+  --chart-1: #caa24a;
+  --chart-2: #7fa0a8;
+  --chart-3: #6fbf73;
+  --chart-4: #c6f24e;
+  --chart-5: #a9c1c8;
+  --sidebar: #0e2831;
+  --sidebar-foreground: #f0e5c8;
+  --sidebar-primary: #caa24a;
+  --sidebar-primary-foreground: #0a1f26;
+  --sidebar-accent: #1a3a44;
+  --sidebar-accent-foreground: #f0e5c8;
+  --sidebar-border: #1a3a44;
+  --sidebar-ring: #caa24a;
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fell-english), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains-mono), "Fira Code", "Courier New", monospace;
+  --font-brand: var(--font-pirata-one), var(--font-fell-english), Georgia, serif;
+  --radius: 0.625rem;
   --shadow-x: 1px;
   --shadow-y: 2px;
   --shadow-blur: 5px;
@@ -147,6 +151,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
+  --font-brand: var(--font-brand);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -159,22 +164,22 @@
   --text-display-xl: 5rem;
   --text-display-xl--line-height: 1.05;
   --text-display-xl--letter-spacing: -0.0375em;
-  --text-display-xl--font-weight: 600;
+  --text-display-xl--font-weight: 400;
 
   --text-display-lg: 3.5rem;
   --text-display-lg--line-height: 1.1;
   --text-display-lg--letter-spacing: -0.0321em;
-  --text-display-lg--font-weight: 600;
+  --text-display-lg--font-weight: 400;
 
   --text-display-md: 2.5rem;
   --text-display-md--line-height: 1.15;
   --text-display-md--letter-spacing: -0.025em;
-  --text-display-md--font-weight: 600;
+  --text-display-md--font-weight: 400;
 
   --text-headline: 1.75rem;
   --text-headline--line-height: 1.2;
   --text-headline--letter-spacing: -0.0214em;
-  --text-headline--font-weight: 600;
+  --text-headline--font-weight: 400;
 
   --text-card-title: 1.375rem;
   --text-card-title--line-height: 1.25;
@@ -213,10 +218,45 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Display type is a warm serif (the "ledger" voice); body stays sans. */
+  h1,
+  h2,
+  h3,
+  .text-display-xl,
+  .text-display-lg,
+  .text-display-md,
+  .text-headline,
+  .text-card-title {
+    font-family: var(--font-serif);
+  }
 }
 
 body {
   letter-spacing: var(--tracking-normal);
+  /* Subtle parchment mottling, tuned per world via the tokens. */
+  background-image:
+    radial-gradient(circle at 18% 24%, rgb(120 95 55 / 6%), transparent 42%),
+    radial-gradient(circle at 84% 74%, rgb(120 95 55 / 7%), transparent 46%);
+}
+
+.dark body {
+  background-image:
+    radial-gradient(circle at 50% -10%, rgb(176 132 47 / 12%), transparent 55%);
+}
+
+/* Brand wordmark face. */
+.font-brand {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* Gold "coin" affordance for primary treasure buttons. */
+.shadow-coin {
+  box-shadow: 0 4px 0 #7d5c1c;
+}
+.dark .shadow-coin {
+  box-shadow: 0 4px 0 #5c4416;
 }
 
 @layer base {

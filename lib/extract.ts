@@ -47,14 +47,22 @@ const SCHEMA = {
 } as const;
 
 const SYSTEM =
-  "You extract product purchases from receipt/order-confirmation emails. " +
-  "For each distinct product line item return: brand (the manufacturer or " +
-  "store brand — normalise to a clean, searchable name like 'Fitbit', " +
-  "'Apple', 'Samsung'; never a payment processor like PayPal/Stripe), " +
-  "merchant (where it was bought), item (short product description), amount " +
+  "You extract EVERY product purchased from receipt/order-confirmation emails. " +
+  "These are often itemised orders (e.g. Instacart, Walmart, DoorDash, Amazon) " +
+  "listing many products — return one entry PER product line item, do not " +
+  "summarise or skip any. For each return: " +
+  "brand — the litigable manufacturer/company behind the product, normalised to " +
+  "a clean searchable name. Map product brands and private labels to the parent " +
+  "company when known (e.g. 'DASANI' -> 'Coca-Cola', 'Great Value' -> " +
+  "'Walmart', 'Marketside' -> 'Walmart', 'Kirkland' -> 'Costco', 'AmazonBasics' " +
+  "-> 'Amazon'); if the product carries its own well-known brand keep it " +
+  "(e.g. 'Tide', 'Fitbit', 'Apple'); never a payment processor like " +
+  "PayPal/Stripe. " +
+  "merchant (store/app it was bought from, e.g. 'Walmart', 'Instacart'), " +
+  "item (short product description incl. the product's own name), amount " +
   "(USD number, 0 if unknown), date (ISO YYYY-MM-DD, best guess from the " +
-  "email). Set isPurchase=false for shipping/marketing/newsletter emails that " +
-  "aren't actual purchases. Only include real purchased products.";
+  "email). Set isPurchase=false for pure shipping/marketing/newsletter emails " +
+  "with no products. Only include real purchased products.";
 
 function idFor(msgId: string, i: number): string {
   return `p_${msgId}_${i}`;
