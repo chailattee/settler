@@ -181,26 +181,28 @@ const mem =
 
 const useDb = dbConfigured();
 
-function memSavePurchases(userId: string, rows: StoredPurchase[]) {
-  const existing = mem.purchases.get(userId) ?? [];
-  const ids = new Set(existing.map((p) => p.id));
-  mem.purchases.set(userId, [...existing, ...rows.filter((r) => !ids.has(r.id))]);
-}
-
 // --- public API -------------------------------------------------------------
 
+/** Each scan REPLACES the user's purchases (delete-then-insert), mirroring
+ *  saveMatches. Accumulating across scans (the old onConflictDoNothing) drifted
+ *  the stored count away from the run's count — because LLM extraction is
+ *  non-deterministic, so re-scans mint new purchase ids — leaving the metrics
+ *  (computed from stored purchases) inconsistent with "found N purchases". */
 export async function savePurchases(userId: string, list: StoredPurchase[]): Promise<void> {
   if (list.length === 0) return;
   const withUser = list.map((p) => ({ ...p, user_id: userId }));
   if (useDb) {
     try {
-      await db!.insert(purchases).values(withUser.map(toInsertPurchase)).onConflictDoNothing();
+      await db!.transaction(async (tx) => {
+        await tx.delete(purchases).where(eq(purchases.userId, userId));
+        await tx.insert(purchases).values(withUser.map(toInsertPurchase));
+      });
       return;
     } catch (err) {
       console.warn("[store] DB purchases write failed, using memory:", String(err));
     }
   }
-  memSavePurchases(userId, withUser);
+  mem.purchases.set(userId, withUser);
 }
 
 export async function getPurchases(userId: string): Promise<StoredPurchase[]> {
