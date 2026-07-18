@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useSession, signOut, connectGmail } from "@/lib/auth-client";
 
 const navLinks = [
+  { href: "/scan", label: "Scan" },
   { href: "/matches", label: "Matches" },
   { href: "/claims", label: "Claims" },
 ];

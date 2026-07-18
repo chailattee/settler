@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,6 +14,7 @@ import {
   Loader2,
   TriangleAlert,
   ArrowRight,
+  RotateCcw,
   CheckCircle2,
 } from "lucide-react";
 
@@ -45,7 +46,6 @@ const KIND_META: Record<
 };
 
 function ScanRunner() {
-  const router = useRouter();
   const params = useSearchParams();
   const demo = params.get("demo") === "1";
 
@@ -54,23 +54,37 @@ function ScanRunner() {
     null,
   );
   const [counts, setCounts] = useState({ purchases: 0, matches: 0 });
-  const [phase, setPhase] = useState<"running" | "done" | "error">("running");
+  const [phase, setPhase] = useState<
+    "checking" | "running" | "done" | "error"
+  >("checking");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  // True when the done state is showing a previously-saved scan rather than a
+  // run that just finished this visit.
+  const [fromCache, setFromCache] = useState(false);
 
   const nextId = useRef(0);
   const started = useRef(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
   function push(item: Omit<FeedItem, "id">) {
     setFeed((f) => [{ id: nextId.current++, ...item }, ...f].slice(0, 40));
   }
 
-  useEffect(() => {
-    // Guard against React 18/19 StrictMode double-invoke in dev.
-    if (started.current) return;
-    started.current = true;
-
+  // Stream a fresh workflow run into the live feed.
+  const startRun = useCallback(() => {
+    controllerRef.current?.abort();
     const controller = new AbortController();
+    controllerRef.current = controller;
+
+    nextId.current = 0;
+    setFeed([]);
+    setScan(null);
+    setCounts({ purchases: 0, matches: 0 });
+    setMetrics(null);
+    setErrorMsg("");
+    setFromCache(false);
+    setPhase("running");
 
     function onEvent(e: AgentEvent) {
       switch (e.type) {
@@ -110,21 +124,54 @@ function ScanRunner() {
       }
     }
 
-    runWorkflow(onEvent, { demo }, controller.signal).catch(
-      (err) => {
-        if (controller.signal.aborted) return;
-        setErrorMsg(err instanceof Error ? err.message : String(err));
-        setPhase("error");
-      },
-    );
-
-    return () => controller.abort();
+    runWorkflow(onEvent, { demo }, controller.signal).catch((err) => {
+      if (controller.signal.aborted) return;
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setPhase("error");
+    });
   }, [demo]);
 
-  // Once the run completes, load persisted purchases + matches and compute
-  // metrics from the documented shapes (payout intentionally excluded).
+  // On first mount: a demo always runs; otherwise show the last saved scan if
+  // there is one (with a Retry option), and only auto-run for first-timers.
   useEffect(() => {
-    if (phase !== "done") return;
+    if (started.current) return;
+    started.current = true;
+
+    if (demo) {
+      startRun();
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [purchases, matches] = await Promise.all([
+          fetchPurchases(),
+          fetchMatches(),
+        ]);
+        if (cancelled) return;
+        if (matches.length > 0) {
+          setCounts({ purchases: purchases.length, matches: matches.length });
+          setMetrics(computeMetrics(purchases, matches));
+          setFromCache(true);
+          setPhase("done");
+        } else {
+          startRun();
+        }
+      } catch {
+        if (!cancelled) startRun();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controllerRef.current?.abort();
+    };
+  }, [demo, startRun]);
+
+  // After a fresh run completes, load persisted data and compute metrics.
+  useEffect(() => {
+    if (phase !== "done" || metrics) return;
     let cancelled = false;
     (async () => {
       try {
@@ -140,7 +187,7 @@ function ScanRunner() {
     return () => {
       cancelled = true;
     };
-  }, [phase]);
+  }, [phase, metrics]);
 
   const scanPct = scan && scan.total > 0 ? (scan.scanned / scan.total) * 100 : 0;
 
@@ -154,7 +201,9 @@ function ScanRunner() {
             phase === "error" ? "bg-destructive" : "bg-primary",
           )}
         >
-          {phase === "running" ? (
+          {phase === "checking" ? (
+            <Loader2 className="size-6 animate-spin" />
+          ) : phase === "running" ? (
             <ScanSearch className="size-6 animate-pulse" />
           ) : phase === "done" ? (
             <CheckCircle2 className="size-6" />
@@ -164,17 +213,35 @@ function ScanRunner() {
         </span>
         <div className="min-w-0">
           <p className="text-eyebrow uppercase text-muted-foreground">
-            {demo ? "Demo scan" : "Scanning your inbox"}
+            {demo
+              ? "Demo scan"
+              : phase === "checking"
+                ? "Your voyage log"
+                : fromCache
+                  ? "Saved analysis"
+                  : "Scanning your inbox"}
           </p>
           <h1 className="text-headline text-foreground">
-            {phase === "running"
-              ? "Finding settlements you qualify for"
-              : phase === "done"
-                ? "Scan complete"
-                : "Scan interrupted"}
+            {phase === "checking"
+              ? "Loading your last scan"
+              : phase === "running"
+                ? "Finding settlements you qualify for"
+                : phase === "done"
+                  ? fromCache
+                    ? "Your last scan"
+                    : "Scan complete"
+                  : "Scan interrupted"}
           </h1>
         </div>
       </header>
+
+      {/* Checking for a prior scan */}
+      {phase === "checking" ? (
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Checking for a previous scan…
+        </div>
+      ) : null}
 
       {/* Gmail progress */}
       {scan ? (
@@ -200,14 +267,16 @@ function ScanRunner() {
       ) : null}
 
       {/* Live counters */}
-      <div className="mb-6 grid grid-cols-2 gap-4">
-        <Counter
-          icon={Receipt}
-          label="Purchases found"
-          value={counts.purchases}
-        />
-        <Counter icon={BadgeCheck} label="Matches" value={counts.matches} />
-      </div>
+      {phase !== "checking" ? (
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          <Counter
+            icon={Receipt}
+            label="Purchases found"
+            value={counts.purchases}
+          />
+          <Counter icon={BadgeCheck} label="Matches" value={counts.matches} />
+        </div>
+      ) : null}
 
       {/* Metrics summary (computed from documented API data) */}
       {phase === "done" && metrics ? (
@@ -233,17 +302,23 @@ function ScanRunner() {
           <div className="flex items-center gap-3">
             <CheckCircle2 className="size-5 text-chart-3" />
             <p className="text-sm">
-              Found{" "}
+              {fromCache ? "Your last scan found " : "Found "}
               <span className="font-semibold">{counts.matches} matches</span>{" "}
               across {counts.purchases} purchases.
             </p>
           </div>
-          <Button asChild>
-            <Link href="/matches">
-              Review matches
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button variant="outline" onClick={startRun}>
+              <RotateCcw className="size-4" />
+              {fromCache ? "Scan again" : "Retry scan"}
+            </Button>
+            <Button asChild>
+              <Link href="/matches">
+                Review matches
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
         </motion.div>
       ) : null}
 
@@ -260,19 +335,21 @@ function ScanRunner() {
             <Button asChild variant="outline" size="sm">
               <Link href="/matches">Go to matches</Link>
             </Button>
-            <Button asChild size="sm">
-              <Link href={demo ? "/scan?demo=1" : "/scan"}>Retry scan</Link>
+            <Button size="sm" onClick={startRun}>
+              <RotateCcw className="size-4" />
+              Retry scan
             </Button>
           </div>
         </div>
       ) : null}
 
-      {/* Activity feed */}
-      <div className="space-y-2">
-        <p className="text-eyebrow uppercase text-muted-foreground">
-          Activity
-        </p>
+      {/* Activity feed (only while/after a live run) */}
+      {feed.length > 0 || phase === "running" ? (
         <div className="space-y-2">
+          <p className="text-eyebrow uppercase text-muted-foreground">
+            Activity
+          </p>
+          <div className="space-y-2">
           <AnimatePresence initial={false}>
             {feed.map((item) => {
               const meta = KIND_META[item.kind];
@@ -316,8 +393,9 @@ function ScanRunner() {
               Warming up the agent…
             </div>
           ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
     </main>
   );
 }
