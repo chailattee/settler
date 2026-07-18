@@ -85,6 +85,9 @@ export const claims = pgTable(
     status: text("status").notNull().default("awaiting_approval"), // queued|filling|awaiting_approval|submitted
     instructions: text("instructions").notNull().default(""),
     deadline: text("deadline"),
+    /** Auto-created Gmail draft for linkless claims (follow-up email). */
+    draftId: text("draft_id"),
+    draftUrl: text("draft_url"),
     enteredData: jsonb("entered_data").$type<{ label: string; value: string; source: string }[]>().notNull().default([]),
     missing: jsonb("missing").$type<string[]>().notNull().default([]),
     createdAt: timestamp("created_at").notNull().defaultNow(),

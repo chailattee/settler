@@ -1,7 +1,14 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { getMatchById, getPurchases, getProfile, saveClaim, getClaims } from "@/lib/store";
-import { prepareClaim, buildPacket, type Identity, type AutofillField } from "@/lib/claim";
+import {
+  prepareClaim,
+  buildPacket,
+  buildFollowupEmail,
+  type Identity,
+  type AutofillField,
+} from "@/lib/claim";
+import { getGoogleAccessToken, createGmailDraft } from "@/lib/gmail";
 import type { ClaimRow } from "@/lib/db/schema";
 
 /** Attach a copy-paste packet + deep link to a stored claim row. */
@@ -60,6 +67,23 @@ export async function POST(req: NextRequest) {
 
   const draft = await prepareClaim(match, purchases, identity);
 
+  // No online form/sign-up link? Auto-create a Gmail DRAFT the user can send to
+  // register interest (to class counsel if we found a contact, else blank To).
+  // Requires the gmail.compose scope; silently skipped without a token.
+  let draftId: string | null = null;
+  let draftUrl: string | null = null;
+  if (!draft.submission.submitUrl) {
+    const token = await getGoogleAccessToken(req.headers);
+    if (token) {
+      const email = buildFollowupEmail(match, purchases, identity, draft.submission.contactEmail);
+      const created = await createGmailDraft(token, email).catch(() => null);
+      if (created) {
+        draftId = created.id;
+        draftUrl = created.url;
+      }
+    }
+  }
+
   const row: ClaimRow = {
     id: `c_${userId}_${match.id}`,
     userId,
@@ -72,6 +96,8 @@ export async function POST(req: NextRequest) {
     status: draft.submission.submitType === "watch" ? "queued" : "awaiting_approval",
     instructions: draft.submission.instructions,
     deadline: draft.submission.deadline,
+    draftId,
+    draftUrl,
     enteredData: draft.enteredData,
     missing: draft.missing,
     createdAt: new Date(),

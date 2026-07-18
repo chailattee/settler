@@ -9,6 +9,7 @@ import {
   ArrowSquareOut,
   ClipboardText,
   Warning,
+  EnvelopeSimple,
 } from "@phosphor-icons/react/dist/ssr";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -228,11 +229,26 @@ function ClaimDetail({ claim }: { claim: ClaimView }) {
             </a>
           </Button>
         )}
+        {!claim.submitUrl && claim.draftUrl && (
+          <Button asChild>
+            <a href={claim.draftUrl} target="_blank" rel="noopener noreferrer">
+              <EnvelopeSimple className="size-4" />
+              Review email draft
+            </a>
+          </Button>
+        )}
         <Button variant="outline" onClick={copyPacket}>
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           {copied ? "Copied" : "Copy details"}
         </Button>
       </div>
+
+      {!claim.submitUrl && claim.draftUrl && (
+        <p className="text-xs text-muted-foreground">
+          No online form yet — we drafted a follow-up email in your Gmail to
+          register interest. Review and send it when you&apos;re ready.
+        </p>
+      )}
 
       {/* Autofilled fields */}
       <Card>

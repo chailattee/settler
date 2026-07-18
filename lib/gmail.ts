@@ -167,6 +167,40 @@ export async function getMessage(token: string, id: string): Promise<GmailMessag
   };
 }
 
+/** Create a Gmail DRAFT (never sends). Used for claims with no online form/
+ *  sign-up link — we compose a follow-up email the user can review and send.
+ *  Requires the gmail.compose scope. Returns the draft id + a link to Gmail
+ *  drafts, or null on failure. */
+export async function createGmailDraft(
+  token: string,
+  msg: { to?: string; subject: string; body: string },
+): Promise<{ id: string; url: string } | null> {
+  const lines: string[] = [];
+  if (msg.to) lines.push(`To: ${msg.to}`);
+  // RFC 2047 encode the subject so non-ASCII survives.
+  lines.push(`Subject: =?UTF-8?B?${Buffer.from(msg.subject, "utf8").toString("base64")}?=`);
+  lines.push("MIME-Version: 1.0");
+  lines.push('Content-Type: text/plain; charset="UTF-8"');
+  lines.push("");
+  lines.push(msg.body);
+
+  const raw = Buffer.from(lines.join("\r\n"), "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  const res = await fetch(`${GMAIL}/drafts`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ message: { raw } }),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { id?: string };
+  if (!data.id) return null;
+  return { id: data.id, url: "https://mail.google.com/mail/u/0/#drafts" };
+}
+
 /** Full scan: list receipt ids then fetch each message (bounded concurrency). */
 export async function scanReceipts(token: string, max = 100): Promise<GmailMessage[]> {
   const ids = await listReceiptIds(token, max);

@@ -21,6 +21,9 @@ export interface Submission {
   requiredFields: string[];
   instructions: string;
   deadline: string | null;
+  /** Contact email for class counsel / settlement admin, when found on scraped
+   *  pages — used as the recipient of an auto-drafted follow-up email. */
+  contactEmail: string | null;
 }
 
 export interface AutofillField {
@@ -55,8 +58,16 @@ const SUBMISSION_SCHEMA = {
       requiredFields: { type: "array", items: { type: "string" } },
       instructions: { type: "string" },
       deadline: { type: ["string", "null"] },
+      contactEmail: { type: ["string", "null"] },
     },
-    required: ["submitType", "submitUrl", "requiredFields", "instructions", "deadline"],
+    required: [
+      "submitType",
+      "submitUrl",
+      "requiredFields",
+      "instructions",
+      "deadline",
+      "contactEmail",
+    ],
   },
 } as const;
 
@@ -72,8 +83,10 @@ const SUBMISSION_SYSTEM =
   "- 'watch': nothing actionable exists yet. submitUrl = null.\n" +
   "Also return requiredFields (labels the form asks for, e.g. 'Full name', " +
   "'Email', 'Proof of purchase', 'Amount', 'Claimant ID'), one-line " +
-  "instructions, and the claim deadline (ISO date or null). Never invent a URL — " +
-  "use null if you don't see a real one.";
+  "instructions, the claim deadline (ISO date or null), and contactEmail (a " +
+  "class counsel / plaintiff-firm / settlement-administrator contact email if " +
+  "one is visible on the pages, else null). Never invent a URL or email — use " +
+  "null if you don't see a real one.";
 
 /** Find the claim/interest destination for a match. */
 export async function discoverSubmission(match: StoredMatch): Promise<Submission> {
@@ -86,6 +99,7 @@ export async function discoverSubmission(match: StoredMatch): Promise<Submission
       requiredFields: ["Full name", "Email", "Mailing address", "Proof of purchase"],
       instructions: "File on the official settlement site; attach your receipt as proof of purchase.",
       deadline: match.deadline,
+      contactEmail: null,
     };
   }
 
@@ -98,6 +112,7 @@ export async function discoverSubmission(match: StoredMatch): Promise<Submission
         ? "Open the linked page to file."
         : "Web search is not configured, so no submission link was found.",
       deadline: match.deadline,
+      contactEmail: null,
     };
   }
 
@@ -115,6 +130,7 @@ export async function discoverSubmission(match: StoredMatch): Promise<Submission
       requiredFields: [],
       instructions: "No submission or sign-up page found yet.",
       deadline: match.deadline,
+      contactEmail: null,
     };
   }
 
@@ -144,8 +160,45 @@ export async function discoverSubmission(match: StoredMatch): Promise<Submission
       requiredFields: [],
       instructions: "Couldn't parse a submission page; open the case link to check manually.",
       deadline: match.deadline,
+      contactEmail: null,
     };
   }
+}
+
+/** Compose a follow-up "register interest" email for a claim with no online
+ *  form/sign-up link — sent to class counsel (if a contact email was found,
+ *  else the user fills the recipient). Returned as a draft; we never send. */
+export function buildFollowupEmail(
+  match: StoredMatch,
+  purchases: StoredPurchase[],
+  identity: Identity,
+  contactEmail: string | null,
+): { to: string; subject: string; body: string } {
+  const items = purchases.map((p) => p.item).filter(Boolean);
+  const itemLines = items.length
+    ? items.map((i) => `  - ${i}`).join("\n")
+    : `  - ${match.item || match.brand}`;
+  const idLines = [
+    identity.name && `Name: ${identity.name}`,
+    identity.email && `Email: ${identity.email}`,
+    identity.phone && `Phone: ${identity.phone}`,
+    identity.address && `Address: ${identity.address}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const subject = `Potential class member — ${match.title}`;
+  const body =
+    `To whom it may concern,\n\n` +
+    `I believe I am a member of the proposed class in ${match.title}` +
+    `${match.brand ? ` involving ${match.brand}` : ""}. I purchased:\n` +
+    `${itemLines}\n\n` +
+    `Please add me to your list of interested class members and keep me ` +
+    `informed of any settlement or claims process.\n\n` +
+    `My details:\n${idLines || "  (add your contact details)"}\n\n` +
+    `Thank you,\n${identity.name || ""}`.trimEnd();
+
+  return { to: contactEmail ?? "", subject, body };
 }
 
 /** Build the autofill draft from identity + the purchases behind this match. */
