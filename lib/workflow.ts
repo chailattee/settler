@@ -195,6 +195,38 @@ function dedupe(matches: ClassActionMatch[]): ClassActionMatch[] {
   );
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Demo run that mirrors the REAL flow's event sequence — a scan phase with
+ *  purchases streaming in one by one, then live matching — instead of jumping
+ *  straight to results. Same events as runWorkflow, just sourced from canned
+ *  purchases. Feels faster (progressive feedback) and is true to how a real
+ *  Gmail scan looks. */
+export async function runDemo(
+  emit: Emit,
+  opts: { userId: string; purchases: BrandPurchase[]; minConfidence?: number },
+): Promise<void> {
+  const { userId, purchases, minConfidence } = opts;
+
+  emit({ type: "status", step: "gmail", message: "Scanning your inbox for receipts…" });
+  await sleep(250);
+  emit({ type: "status", step: "gmail", message: `Found ${purchases.length} receipt-like emails.` });
+
+  for (let i = 0; i < purchases.length; i++) {
+    await sleep(160);
+    emit({ type: "gmail_scanning", scanned: i + 1, total: purchases.length });
+    emit({ type: "purchase_found", purchase: purchases[i] });
+  }
+
+  emit({
+    type: "status",
+    step: "extract",
+    message: `Extracted ${purchases.length} purchases; matching…`,
+  });
+
+  await matchPurchases(emit, { userId, purchases, minConfidence });
+}
+
 /** The per-product class-action lookup half of the pipeline (CourtListener +
  *  web). Used by the demo route, which supplies all purchases up front. Brands
  *  are analysed with bounded concurrency. */
