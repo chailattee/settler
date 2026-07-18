@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Claimly — Find the settlement money you're owed",
+  title: "Settlers — Find the settlement money you're owed",
   description:
-    "Claimly scans your inbox, matches you to open class-action settlements, and files the claims for you — stopping at the signature so you stay in control.",
+    "Settlers scans your inbox, matches you to open class-action settlements, and files the claims for you — stopping at the signature so you stay in control.",
 };
 
 export default function RootLayout({

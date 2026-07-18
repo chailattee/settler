@@ -16,12 +16,12 @@ export function Logo({
         "inline-flex items-center gap-2 font-semibold tracking-tight",
         className,
       )}
-      aria-label="Claimly home"
+      aria-label="Settlers home"
     >
       <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
         <ScanSearch className="size-5" />
       </span>
-      <span className="text-lg">Claimly</span>
+      <span className="text-lg">Settlers</span>
     </Link>
   );
 }

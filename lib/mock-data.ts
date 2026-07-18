@@ -14,7 +14,7 @@ export const settlements: Settlement[] = [
     defendant: "DemoCorp Inc.",
     category: "Data breach",
     summary:
-      "A 2024 breach exposed customer emails and order history. Safe demo case — files against Claimly's local mock site.",
+      "A 2024 breach exposed customer emails and order history. Safe demo case — files against Settlers's local mock site.",
     classPeriod: "Jan 2024 – Aug 2024",
     qualifyingPurchase: "Any DemoCorp account active during the class period",
     proofRequired: "Email address on file (auto-detected from your inbox)",

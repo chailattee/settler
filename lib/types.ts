@@ -1,4 +1,4 @@
-/** Shared domain types for Claimly. In the hackathon build these back mock
+/** Shared domain types for Settlers. In the hackathon build these back mock
  *  data; the real app fills them from Gmail scans + the OpenAI matching engine. */
 
 export type SettlementCategory =

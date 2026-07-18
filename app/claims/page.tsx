@@ -49,7 +49,7 @@ export default function ClaimsPage() {
           </h1>
           <p className="mt-2 max-w-2xl text-body-lg text-muted-foreground">
             The agent works through each settlement, fills every field, and then
-            pauses. You review the entries and add your signature — Claimly never
+            pauses. You review the entries and add your signature — Settlers never
             attests or submits for you.
           </p>
 

@@ -12,7 +12,7 @@ export function Footer() {
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
-          Claimly is a demo. Not legal advice. Read-only Gmail access; raw
+          Settlers is a demo. Not legal advice. Read-only Gmail access; raw
           emails are discarded after parsing.
         </p>
       </div>

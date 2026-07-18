@@ -64,7 +64,7 @@ export function ApprovalGate({ settlement }: { settlement?: Settlement }) {
           <div className="mt-5 flex items-center gap-2 rounded-lg bg-background/60 px-3 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-4 shrink-0 text-chart-3" />
             <span>
-              Claimly never checks the box or clicks submit for you.
+              Settlers never checks the box or clicks submit for you.
             </span>
           </div>
         </div>

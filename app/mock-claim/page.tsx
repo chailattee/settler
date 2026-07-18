@@ -202,7 +202,7 @@ export default function MockClaimPage() {
                     href="/"
                     className="text-sm text-slate-600 underline underline-offset-2 hover:text-slate-800"
                   >
-                    ← Back to Claimly
+                    ← Back to Settlers
                   </Link>
                 )}
 
@@ -454,7 +454,7 @@ function StepThree({
     <div>
       {/* Hand-off annotation callout */}
       <div className="mb-5 rounded-sm bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 text-sm">
-        ⏸ Claimly&apos;s agent stopped here. Review the details and sign to
+        ⏸ Settlers&apos;s agent stopped here. Review the details and sign to
         submit.
       </div>
 
@@ -571,7 +571,7 @@ function SuccessScreen({
           href="/"
           className="inline-flex items-center gap-1 text-sm text-slate-700 underline underline-offset-2 hover:text-slate-900"
         >
-          ← Back to Claimly
+          ← Back to Settlers
         </Link>
       </div>
     </div>
