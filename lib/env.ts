@@ -26,15 +26,8 @@ export const env = {
   // receipt extraction and case classification). Override via OPENROUTER_MODEL.
   openrouterModel: () => optional("OPENROUTER_MODEL", "anthropic/claude-haiku-4.5"),
 
-  // --- Supabase (data, via PostgREST) ---
-  supabaseUrl: () => required("NEXT_PUBLIC_SUPABASE_URL"),
-  /** Prefer the service-role key for server-side writes (bypasses RLS). Falls
-   *  back to the publishable/anon key — which only works if the relevant tables
-   *  have permissive RLS (fine for a hackathon with RLS disabled). */
-  supabaseKey: () =>
-    optional("SUPABASE_SERVICE_ROLE_KEY") ||
-    optional("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ||
-    required("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+  // Supabase (data) is read directly in lib/supabase.ts via the supabase-js
+  // client (NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).
 
   // --- CourtListener (class-action lookup) ---
   /** Optional. Without a token you get low anonymous rate limits; with one you

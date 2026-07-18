@@ -1,58 +1,20 @@
-import * as db from "@/lib/supabase";
+import { eq, desc } from "drizzle-orm";
+import { db, dbConfigured } from "@/lib/db";
+import { purchases, classActionMatches } from "@/lib/db/schema";
+import type { NewPurchaseRow, PurchaseRow, MatchRow } from "@/lib/db/schema";
 import type { PurchaseRecord } from "@/lib/types";
 import type { ClassActionMatch } from "@/lib/classaction";
 
 /** Persistence for scanned purchases and class-action matches.
  *
- *  Backed by Supabase (PostgREST) when configured; otherwise an in-process Map
- *  so the flow is demoable with zero setup. Keyed by userId so a session's data
- *  stays scoped to the signed-in user. Schema: supabase/schema.sql. */
+ *  Backed by Supabase Postgres via Drizzle (lib/db) when DATABASE_URL is set;
+ *  otherwise an in-process Map so the flow is demoable with zero setup. Keyed
+ *  by userId. The public JSON shapes returned here (snake_case StoredMatch /
+ *  camelCase StoredPurchase) are the API contract — keep them stable. */
 
 export type StoredPurchase = PurchaseRecord & { brand: string; user_id: string };
 
-/** DB row shape (snake_case columns; PostgREST matches JSON keys to column
- *  names exactly). */
-interface PurchaseRow {
-  id: string;
-  user_id: string;
-  merchant: string;
-  item: string;
-  amount: number;
-  date: string;
-  source: string;
-  evidence_label: string;
-  brand: string;
-}
-
-function toRow(p: StoredPurchase): PurchaseRow {
-  return {
-    id: p.id,
-    user_id: p.user_id,
-    merchant: p.merchant,
-    item: p.item,
-    amount: p.amount,
-    date: p.date,
-    source: p.source,
-    evidence_label: p.evidenceLabel,
-    brand: p.brand,
-  };
-}
-
-function fromRow(r: PurchaseRow): StoredPurchase {
-  return {
-    id: r.id,
-    user_id: r.user_id,
-    merchant: r.merchant,
-    item: r.item,
-    amount: r.amount,
-    date: r.date,
-    source: (r.source as PurchaseRecord["source"]) ?? "gmail",
-    evidenceLabel: r.evidence_label,
-    brand: r.brand,
-  };
-}
-
-interface StoredMatch {
+export interface StoredMatch {
   id: string;
   user_id: string;
   brand: string;
@@ -73,26 +35,37 @@ interface StoredMatch {
   uncertainties: string[];
 }
 
-/** In-memory fallback store. Hung off globalThis so it's shared across route
- *  handlers (Next bundles each route separately, so a plain module-level Map
- *  would be per-route and reads from /api/matches wouldn't see the workflow's
- *  writes). Used only when Supabase is unconfigured or a DB call fails. */
-const g = globalThis as typeof globalThis & {
-  __settlersMem?: {
-    purchases: Map<string, StoredPurchase[]>;
-    matches: Map<string, StoredMatch[]>;
+// --- mappers: domain <-> Drizzle rows ---------------------------------------
+
+function toInsertPurchase(p: StoredPurchase): NewPurchaseRow {
+  return {
+    id: p.id,
+    userId: p.user_id,
+    merchant: p.merchant,
+    item: p.item,
+    amount: p.amount,
+    date: p.date,
+    source: p.source,
+    evidenceLabel: p.evidenceLabel,
+    brand: p.brand,
   };
-};
-const mem =
-  g.__settlersMem ??
-  (g.__settlersMem = {
-    purchases: new Map<string, StoredPurchase[]>(),
-    matches: new Map<string, StoredMatch[]>(),
-  });
+}
 
-const useDb = db.supabaseConfigured();
+function fromPurchaseRow(r: PurchaseRow): StoredPurchase {
+  return {
+    id: r.id,
+    user_id: r.userId,
+    merchant: r.merchant,
+    item: r.item,
+    amount: r.amount,
+    date: r.date,
+    source: (r.source as PurchaseRecord["source"]) ?? "gmail",
+    evidenceLabel: r.evidenceLabel,
+    brand: r.brand,
+  };
+}
 
-/** Stable id from source + brand + title, so re-runs upsert rather than dupe. */
+/** Stable id from source + brand + title, so re-runs replace rather than dupe. */
 function matchId(userId: string, m: ClassActionMatch): string {
   const slug = `${m.brand}-${m.title}`
     .toLowerCase()
@@ -125,23 +98,88 @@ function toStoredMatch(userId: string, m: ClassActionMatch): StoredMatch {
   };
 }
 
-/** Remember to save into memory (used as the fallback whenever a DB call
- *  fails, e.g. schema.sql hasn't been run yet). */
+function storedMatchToInsert(s: StoredMatch) {
+  return {
+    id: s.id,
+    userId: s.user_id,
+    brand: s.brand,
+    item: s.item,
+    source: s.source,
+    title: s.title,
+    url: s.url,
+    court: s.court,
+    active: s.active,
+    confidence: s.confidence,
+    claimUrl: s.claim_url,
+    summary: s.summary,
+    payoutLow: s.payout_low,
+    payoutHigh: s.payout_high,
+    deadline: s.deadline,
+    purchaseIds: s.purchase_ids,
+    whyQualified: s.why_qualified,
+    uncertainties: s.uncertainties,
+  };
+}
+
+function fromMatchRow(r: MatchRow): StoredMatch {
+  return {
+    id: r.id,
+    user_id: r.userId,
+    brand: r.brand,
+    item: r.item,
+    source: r.source as "courtlistener" | "web",
+    title: r.title,
+    url: r.url,
+    court: r.court,
+    active: r.active,
+    confidence: r.confidence,
+    claim_url: r.claimUrl ?? null,
+    summary: r.summary,
+    payout_low: r.payoutLow,
+    payout_high: r.payoutHigh,
+    deadline: r.deadline ?? null,
+    purchase_ids: r.purchaseIds ?? [],
+    why_qualified: r.whyQualified ?? [],
+    uncertainties: r.uncertainties ?? [],
+  };
+}
+
+// --- in-memory fallback -----------------------------------------------------
+
+/** Hung off globalThis so it's shared across route handlers (Next bundles each
+ *  route separately). Used when DATABASE_URL is unset or a DB call fails. */
+const g = globalThis as typeof globalThis & {
+  __settlersMem?: {
+    purchases: Map<string, StoredPurchase[]>;
+    matches: Map<string, StoredMatch[]>;
+  };
+};
+const mem =
+  g.__settlersMem ??
+  (g.__settlersMem = {
+    purchases: new Map<string, StoredPurchase[]>(),
+    matches: new Map<string, StoredMatch[]>(),
+  });
+
+const useDb = dbConfigured();
+
 function memSavePurchases(userId: string, rows: StoredPurchase[]) {
   const existing = mem.purchases.get(userId) ?? [];
   const ids = new Set(existing.map((p) => p.id));
   mem.purchases.set(userId, [...existing, ...rows.filter((r) => !ids.has(r.id))]);
 }
 
-export async function savePurchases(userId: string, purchases: StoredPurchase[]): Promise<void> {
-  if (purchases.length === 0) return;
-  const withUser = purchases.map((p) => ({ ...p, user_id: userId }));
+// --- public API -------------------------------------------------------------
+
+export async function savePurchases(userId: string, list: StoredPurchase[]): Promise<void> {
+  if (list.length === 0) return;
+  const withUser = list.map((p) => ({ ...p, user_id: userId }));
   if (useDb) {
     try {
-      await db.upsert("purchases", withUser.map(toRow));
+      await db!.insert(purchases).values(withUser.map(toInsertPurchase)).onConflictDoNothing();
       return;
     } catch (err) {
-      console.warn("[store] Supabase purchases write failed, using memory:", String(err));
+      console.warn("[store] DB purchases write failed, using memory:", String(err));
     }
   }
   memSavePurchases(userId, withUser);
@@ -150,11 +188,12 @@ export async function savePurchases(userId: string, purchases: StoredPurchase[])
 export async function getPurchases(userId: string): Promise<StoredPurchase[]> {
   if (useDb) {
     try {
-      const rows = await db.select<PurchaseRow>(
-        "purchases",
-        `select=*&user_id=eq.${userId}&order=date.desc`,
-      );
-      return rows.map(fromRow);
+      const rows = await db!
+        .select()
+        .from(purchases)
+        .where(eq(purchases.userId, userId))
+        .orderBy(desc(purchases.date));
+      return rows.map(fromPurchaseRow);
     } catch {
       /* fall through to memory */
     }
@@ -167,10 +206,14 @@ export async function saveMatches(userId: string, matches: ClassActionMatch[]): 
   if (rows.length === 0) return;
   if (useDb) {
     try {
-      await db.upsert("class_action_matches", rows);
+      // Each run replaces this user's matches with the fresh deduped set.
+      await db!.transaction(async (tx) => {
+        await tx.delete(classActionMatches).where(eq(classActionMatches.userId, userId));
+        await tx.insert(classActionMatches).values(rows.map(storedMatchToInsert));
+      });
       return;
     } catch (err) {
-      console.warn("[store] Supabase matches write failed, using memory:", String(err));
+      console.warn("[store] DB matches write failed, using memory:", String(err));
     }
   }
   mem.matches.set(userId, rows);
@@ -179,10 +222,12 @@ export async function saveMatches(userId: string, matches: ClassActionMatch[]): 
 export async function getMatches(userId: string): Promise<StoredMatch[]> {
   if (useDb) {
     try {
-      return await db.select<StoredMatch>(
-        "class_action_matches",
-        `select=*&user_id=eq.${userId}&order=confidence.desc`,
-      );
+      const rows = await db!
+        .select()
+        .from(classActionMatches)
+        .where(eq(classActionMatches.userId, userId))
+        .orderBy(desc(classActionMatches.confidence));
+      return rows.map(fromMatchRow);
     } catch {
       /* fall through to memory */
     }

@@ -17,10 +17,9 @@ matched lawsuits. (Claim filing is a later flow.)
 OPENROUTER_API_KEY=sk-or-...
 OPENROUTER_MODEL=anthropic/claude-haiku-4.5   # optional; this is the default
 
-# Data (Supabase, via PostgREST). Optional — falls back to in-memory if unset.
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...       # anon key; RLS must allow writes
-# SUPABASE_SERVICE_ROLE_KEY=...                # preferred for server writes
+# Data (Supabase Postgres via Drizzle). Optional — falls back to in-memory if unset.
+# Supabase → Project Settings → Database → Connection string → "Session pooler" (URI).
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 
 # Class-action lookup (CourtListener). Optional token = higher rate limits.
 COURTLISTENER_API_TOKEN=...
@@ -34,9 +33,12 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ```
 
-**Supabase tables:** run [`supabase/schema.sql`](./supabase/schema.sql) once in
-the Supabase SQL editor. If you skip Supabase entirely, the store falls back to
-an in-process cache and everything still works for a single session.
+**Database schema:** defined in `lib/db/schema.ts` (Drizzle). Apply it with
+`npm run db:push` (needs `DATABASE_URL`). RLS is enabled with no policies — the
+backend connects as the `postgres` role (bypasses RLS) and the UI goes through
+these API routes, so the publishable key never touches the tables. If you skip
+`DATABASE_URL` entirely, the store falls back to an in-process cache and
+everything still works for a single session.
 
 ---
 
@@ -156,7 +158,8 @@ runWorkflow((e) => {
 | ------------------ | ---------------------------------------------------------- |
 | `env.ts`           | Central env access                                         |
 | `openrouter.ts`    | LLM chat + JSON-schema structured output                   |
-| `supabase.ts`      | PostgREST select/insert/upsert/update                      |
+| `db/schema.ts`     | Drizzle schema (source of truth; `npm run db:push`)        |
+| `db/index.ts`      | Drizzle client over Supabase Postgres (postgres.js)        |
 | `gmail.ts`         | Google token (via better-auth) + receipt scan (Gmail REST) |
 | `extract.ts`       | Receipt email → `PurchaseRecord[]` (LLM)                   |
 | `courtlistener.ts` | Brand → active class-action dockets                        |
