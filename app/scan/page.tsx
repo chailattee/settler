@@ -1,21 +1,22 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ScanSearch,
-  Mail,
+  MagnifyingGlass,
+  EnvelopeSimple,
   Receipt,
-  Building2,
-  BadgeCheck,
-  Sparkles,
-  Loader2,
-  TriangleAlert,
+  Buildings,
+  SealCheck,
+  Sparkle,
+  CircleNotch,
+  Warning,
   ArrowRight,
-  CheckCircle2,
-} from "lucide-react";
+  ArrowCounterClockwise,
+  CheckCircle,
+} from "@phosphor-icons/react/dist/ssr";
 
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -36,16 +37,15 @@ interface FeedItem {
 
 const KIND_META: Record<
   FeedKind,
-  { icon: typeof Mail; className: string }
+  { icon: typeof EnvelopeSimple; className: string }
 > = {
-  status: { icon: Sparkles, className: "bg-secondary text-secondary-foreground" },
+  status: { icon: Sparkle, className: "bg-secondary text-secondary-foreground" },
   purchase: { icon: Receipt, className: "bg-accent/50 text-accent-foreground" },
-  brand: { icon: Building2, className: "bg-muted text-muted-foreground" },
-  match: { icon: BadgeCheck, className: "bg-chart-3/15 text-chart-3" },
+  brand: { icon: Buildings, className: "bg-muted text-muted-foreground" },
+  match: { icon: SealCheck, className: "bg-chart-3/15 text-chart-3" },
 };
 
 function ScanRunner() {
-  const router = useRouter();
   const params = useSearchParams();
   const demo = params.get("demo") === "1";
 
@@ -54,23 +54,37 @@ function ScanRunner() {
     null,
   );
   const [counts, setCounts] = useState({ purchases: 0, matches: 0 });
-  const [phase, setPhase] = useState<"running" | "done" | "error">("running");
+  const [phase, setPhase] = useState<
+    "checking" | "running" | "done" | "error"
+  >("checking");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  // True when the done state is showing a previously-saved scan rather than a
+  // run that just finished this visit.
+  const [fromCache, setFromCache] = useState(false);
 
   const nextId = useRef(0);
   const started = useRef(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
   function push(item: Omit<FeedItem, "id">) {
     setFeed((f) => [{ id: nextId.current++, ...item }, ...f].slice(0, 40));
   }
 
-  useEffect(() => {
-    // Guard against React 18/19 StrictMode double-invoke in dev.
-    if (started.current) return;
-    started.current = true;
-
+  // Stream a fresh workflow run into the live feed.
+  const startRun = useCallback(() => {
+    controllerRef.current?.abort();
     const controller = new AbortController();
+    controllerRef.current = controller;
+
+    nextId.current = 0;
+    setFeed([]);
+    setScan(null);
+    setCounts({ purchases: 0, matches: 0 });
+    setMetrics(null);
+    setErrorMsg("");
+    setFromCache(false);
+    setPhase("running");
 
     function onEvent(e: AgentEvent) {
       switch (e.type) {
@@ -110,21 +124,54 @@ function ScanRunner() {
       }
     }
 
-    runWorkflow(onEvent, { demo }, controller.signal).catch(
-      (err) => {
-        if (controller.signal.aborted) return;
-        setErrorMsg(err instanceof Error ? err.message : String(err));
-        setPhase("error");
-      },
-    );
-
-    return () => controller.abort();
+    runWorkflow(onEvent, { demo }, controller.signal).catch((err) => {
+      if (controller.signal.aborted) return;
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setPhase("error");
+    });
   }, [demo]);
 
-  // Once the run completes, load persisted purchases + matches and compute
-  // metrics from the documented shapes (payout intentionally excluded).
+  // On first mount: a demo always runs; otherwise show the last saved scan if
+  // there is one (with a Retry option), and only auto-run for first-timers.
   useEffect(() => {
-    if (phase !== "done") return;
+    if (started.current) return;
+    started.current = true;
+
+    if (demo) {
+      startRun();
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [purchases, matches] = await Promise.all([
+          fetchPurchases(),
+          fetchMatches(),
+        ]);
+        if (cancelled) return;
+        if (matches.length > 0) {
+          setCounts({ purchases: purchases.length, matches: matches.length });
+          setMetrics(computeMetrics(purchases, matches));
+          setFromCache(true);
+          setPhase("done");
+        } else {
+          startRun();
+        }
+      } catch {
+        if (!cancelled) startRun();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controllerRef.current?.abort();
+    };
+  }, [demo, startRun]);
+
+  // After a fresh run completes, load persisted data and compute metrics.
+  useEffect(() => {
+    if (phase !== "done" || metrics) return;
     let cancelled = false;
     (async () => {
       try {
@@ -140,7 +187,7 @@ function ScanRunner() {
     return () => {
       cancelled = true;
     };
-  }, [phase]);
+  }, [phase, metrics]);
 
   const scanPct = scan && scan.total > 0 ? (scan.scanned / scan.total) * 100 : 0;
 
@@ -154,34 +201,54 @@ function ScanRunner() {
             phase === "error" ? "bg-destructive" : "bg-primary",
           )}
         >
-          {phase === "running" ? (
-            <ScanSearch className="size-6 animate-pulse" />
+          {phase === "checking" ? (
+            <CircleNotch className="size-6 animate-spin" />
+          ) : phase === "running" ? (
+            <MagnifyingGlass className="size-6 animate-pulse" />
           ) : phase === "done" ? (
-            <CheckCircle2 className="size-6" />
+            <CheckCircle className="size-6" />
           ) : (
-            <TriangleAlert className="size-6" />
+            <Warning className="size-6" />
           )}
         </span>
         <div className="min-w-0">
           <p className="text-eyebrow uppercase text-muted-foreground">
-            {demo ? "Demo scan" : "Scanning your inbox"}
+            {demo
+              ? "Demo scan"
+              : phase === "checking"
+                ? "Your voyage log"
+                : fromCache
+                  ? "Saved analysis"
+                  : "Scanning your inbox"}
           </p>
           <h1 className="text-headline text-foreground">
-            {phase === "running"
-              ? "Finding settlements you qualify for"
-              : phase === "done"
-                ? "Scan complete"
-                : "Scan interrupted"}
+            {phase === "checking"
+              ? "Loading your last scan"
+              : phase === "running"
+                ? "Finding settlements you qualify for"
+                : phase === "done"
+                  ? fromCache
+                    ? "Your last scan"
+                    : "Scan complete"
+                  : "Scan interrupted"}
           </h1>
         </div>
       </header>
+
+      {/* Checking for a prior scan */}
+      {phase === "checking" ? (
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+          <CircleNotch className="size-4 animate-spin" />
+          Checking for a previous scan…
+        </div>
+      ) : null}
 
       {/* Gmail progress */}
       {scan ? (
         <div className="mb-6 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2 text-muted-foreground">
-              <Mail className="size-4" />
+              <EnvelopeSimple className="size-4" />
               Reading receipt emails
             </span>
             <span className="font-medium tabular-nums">
@@ -200,14 +267,16 @@ function ScanRunner() {
       ) : null}
 
       {/* Live counters */}
-      <div className="mb-6 grid grid-cols-2 gap-4">
-        <Counter
-          icon={Receipt}
-          label="Purchases found"
-          value={counts.purchases}
-        />
-        <Counter icon={BadgeCheck} label="Matches" value={counts.matches} />
-      </div>
+      {phase !== "checking" ? (
+        <div className="mb-6 grid grid-cols-2 gap-4">
+          <Counter
+            icon={Receipt}
+            label="Purchases found"
+            value={counts.purchases}
+          />
+          <Counter icon={SealCheck} label="Matches" value={counts.matches} />
+        </div>
+      ) : null}
 
       {/* Metrics summary (computed from documented API data) */}
       {phase === "done" && metrics ? (
@@ -231,26 +300,32 @@ function ScanRunner() {
           className="mb-6 flex flex-col items-start gap-3 rounded-xl border border-chart-3/30 bg-chart-3/10 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-5 text-chart-3" />
+            <CheckCircle className="size-5 text-chart-3" />
             <p className="text-sm">
-              Found{" "}
+              {fromCache ? "Your last scan found " : "Found "}
               <span className="font-semibold">{counts.matches} matches</span>{" "}
               across {counts.purchases} purchases.
             </p>
           </div>
-          <Button asChild>
-            <Link href="/matches">
-              Review matches
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button variant="outline" onClick={startRun}>
+              <ArrowCounterClockwise className="size-4" />
+              {fromCache ? "Scan again" : "Retry scan"}
+            </Button>
+            <Button asChild>
+              <Link href="/matches">
+                Review matches
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
         </motion.div>
       ) : null}
 
       {phase === "error" ? (
         <div className="mb-6 flex flex-col items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-5">
           <div className="flex items-center gap-2 text-sm">
-            <TriangleAlert className="size-5 shrink-0 text-destructive" />
+            <Warning className="size-5 shrink-0 text-destructive" />
             <span>
               {errorMsg || "The scan didn't finish."} You can still review any
               matches found so far.
@@ -260,19 +335,21 @@ function ScanRunner() {
             <Button asChild variant="outline" size="sm">
               <Link href="/matches">Go to matches</Link>
             </Button>
-            <Button asChild size="sm">
-              <Link href={demo ? "/scan?demo=1" : "/scan"}>Retry scan</Link>
+            <Button size="sm" onClick={startRun}>
+              <ArrowCounterClockwise className="size-4" />
+              Retry scan
             </Button>
           </div>
         </div>
       ) : null}
 
-      {/* Activity feed */}
-      <div className="space-y-2">
-        <p className="text-eyebrow uppercase text-muted-foreground">
-          Activity
-        </p>
+      {/* Activity feed (only while/after a live run) */}
+      {feed.length > 0 || phase === "running" ? (
         <div className="space-y-2">
+          <p className="text-eyebrow uppercase text-muted-foreground">
+            Activity
+          </p>
+          <div className="space-y-2">
           <AnimatePresence initial={false}>
             {feed.map((item) => {
               const meta = KIND_META[item.kind];
@@ -312,12 +389,13 @@ function ScanRunner() {
 
           {phase === "running" && feed.length === 0 ? (
             <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3.5 py-3 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
+              <CircleNotch className="size-4 animate-spin" />
               Warming up the agent…
             </div>
           ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
     </main>
   );
 }
@@ -327,7 +405,7 @@ function Counter({
   label,
   value,
 }: {
-  icon: typeof Mail;
+  icon: typeof EnvelopeSimple;
   label: string;
   value: number;
 }) {
@@ -356,7 +434,7 @@ export default function ScanPage() {
       <Suspense
         fallback={
           <div className="mx-auto max-w-2xl px-6 py-20 text-center text-muted-foreground">
-            <Loader2 className="mx-auto size-6 animate-spin" />
+            <CircleNotch className="mx-auto size-6 animate-spin" />
           </div>
         }
       >

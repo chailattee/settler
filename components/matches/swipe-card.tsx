@@ -8,7 +8,7 @@ import {
   animate,
   type PanInfo,
 } from "framer-motion";
-import { Check, X } from "lucide-react";
+import { Check, X } from "@phosphor-icons/react/dist/ssr";
 
 import { MatchCard } from "@/components/matches/match-card";
 import type { MatchView } from "@/lib/api";
@@ -90,14 +90,14 @@ export function SwipeCard({
               style={{ opacity: queueOpacity }}
               className="pointer-events-none absolute left-5 top-5 z-10 flex items-center gap-1.5 rounded-lg border-2 border-chart-3 bg-chart-3/15 px-3 py-1.5 text-sm font-bold uppercase tracking-wider text-chart-3 shadow-sm -rotate-12"
             >
-              <Check className="size-4" strokeWidth={3} />
+              <Check className="size-4" weight="bold" />
               Queue
             </motion.div>
             <motion.div
               style={{ opacity: skipOpacity }}
               className="pointer-events-none absolute right-5 top-5 z-10 flex items-center gap-1.5 rounded-lg border-2 border-destructive bg-destructive/10 px-3 py-1.5 text-sm font-bold uppercase tracking-wider text-destructive shadow-sm rotate-12"
             >
-              <X className="size-4" strokeWidth={3} />
+              <X className="size-4" weight="bold" />
               Skip
             </motion.div>
           </>

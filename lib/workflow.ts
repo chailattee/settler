@@ -11,9 +11,13 @@ import type { PurchaseRecord } from "@/lib/types";
  *    Gmail scan -> receipt extraction -> per-product class-action lookup from
  *    BOTH CourtListener and web search -> merge/dedup -> list.
  *
- *  The route wraps this in an SSE stream; the emitted events drive the UI's
- *  live activity feed. Persistence happens as data is produced. (Filing is a
- *  later flow — this stops at listing the lawsuits.) */
+ *  Extraction and lawsuit lookup are PIPELINED: each brand's analysis starts the
+ *  moment that brand is first discovered, overlapping with the rest of the inbox
+ *  scan rather than waiting for it to finish. LLM concurrency is bounded
+ *  globally in lib/openrouter, so this stays fast without tripping rate limits.
+ *
+ *  The route wraps this in an SSE stream; emitted events drive the UI's live
+ *  activity feed. (Filing is a later flow — this stops at listing the lawsuits.) */
 
 type BrandPurchase = PurchaseRecord & { brand: string };
 
@@ -24,20 +28,62 @@ export interface WorkflowOpts {
   minConfidence?: number;
 }
 
+/** Simple async concurrency limiter (no dependency). */
+function limiter(max: number) {
+  let active = 0;
+  const queue: (() => void)[] = [];
+  const pump = () => {
+    while (active < max && queue.length) {
+      active++;
+      queue.shift()!();
+    }
+  };
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      queue.push(() =>
+        fn()
+          .then(resolve, reject)
+          .finally(() => {
+            active--;
+            pump();
+          }),
+      );
+      pump();
+    });
+}
+
+const BRAND_CONCURRENCY = 4;
+
 export async function runWorkflow(emit: Emit, opts: WorkflowOpts): Promise<void> {
-  const { userId, token, maxEmails = 200, minConfidence = 0.5 } = opts;
+  const { userId, token, maxEmails = 100, minConfidence = 0.5 } = opts;
+  const sources = braveConfigured() ? "CourtListener + web" : "CourtListener";
 
   // 1. Gmail scan --------------------------------------------------------
   emit({ type: "status", step: "gmail", message: "Scanning your inbox for receipts…" });
   const ids = await listReceiptIds(token, maxEmails);
   emit({ type: "status", step: "gmail", message: `Found ${ids.length} receipt-like emails.` });
 
-  // 2. Extraction (bounded concurrency so 100 emails stays fast) ----------
+  // 2. Extraction + analysis, pipelined ----------------------------------
+  // Each brand's lookup is scheduled as soon as the brand first appears, so
+  // lawsuit discovery overlaps with the remaining inbox scan.
   const purchases: BrandPurchase[] = [];
-  const CONCURRENCY = 8;
+  const brandPurchases = new Map<string, BrandPurchase[]>();
+  const scheduled = new Set<string>();
+  const runBrand = limiter(BRAND_CONCURRENCY);
+  const analyses: Promise<ClassActionMatch[]>[] = [];
+
+  const scheduleBrand = (key: string) => {
+    if (scheduled.has(key)) return;
+    scheduled.add(key);
+    // Read the (possibly grown) group lazily when the limiter runs it, so
+    // later purchases of the same brand are included.
+    analyses.push(runBrand(() => analyzeBrand(emit, brandPurchases.get(key)!, minConfidence, sources)));
+  };
+
+  const EXTRACT_CONCURRENCY = 8;
   let scanned = 0;
-  for (let i = 0; i < ids.length; i += CONCURRENCY) {
-    const batch = ids.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < ids.length; i += EXTRACT_CONCURRENCY) {
+    const batch = ids.slice(i, i + EXTRACT_CONCURRENCY);
     const results = await Promise.all(
       batch.map(async (id) => {
         const msg = await getMessage(token, id);
@@ -54,6 +100,10 @@ export async function runWorkflow(emit: Emit, opts: WorkflowOpts): Promise<void>
       for (const p of found) {
         purchases.push(p);
         emit({ type: "purchase_found", purchase: p });
+        const key = (p.brand || p.merchant).toLowerCase();
+        if (!key) continue;
+        brandPurchases.set(key, [...(brandPurchases.get(key) ?? []), p]);
+        scheduleBrand(key);
       }
     }
   }
@@ -61,10 +111,18 @@ export async function runWorkflow(emit: Emit, opts: WorkflowOpts): Promise<void>
   emit({
     type: "status",
     step: "extract",
-    message: `Extracted ${purchases.length} purchases from ${ids.length} emails.`,
+    message: `Extracted ${purchases.length} purchases from ${ids.length} emails; matching…`,
   });
 
-  await matchPurchases(emit, { userId, purchases, minConfidence });
+  await savePurchases(
+    userId,
+    purchases.map((p) => ({ ...p, user_id: userId }) as StoredPurchase),
+  );
+
+  const all = (await Promise.all(analyses)).flat();
+  const matches = dedupe(all);
+  await saveMatches(userId, matches);
+  emit({ type: "done", purchases: purchases.length, matches: matches.length });
 }
 
 /** Group purchases by normalised brand. */
@@ -76,6 +134,45 @@ function groupByBrand(purchases: BrandPurchase[]): Map<string, BrandPurchase[]> 
     byBrand.set(key, [...(byBrand.get(key) ?? []), p]);
   }
   return byBrand;
+}
+
+/** Look up + screen class actions for one brand group, emitting match events. */
+async function analyzeBrand(
+  emit: Emit,
+  group: BrandPurchase[],
+  minConfidence: number,
+  sources: string,
+): Promise<ClassActionMatch[]> {
+  const brand = group[0].brand || group[0].merchant;
+  const item = group.map((p) => p.item).join(", ");
+  const purchaseIds = group.map((p) => p.id);
+
+  emit({ type: "brand_lookup", brand, message: `Searching ${sources} for “${item}”…` });
+
+  const [clMatches, wMatches] = await Promise.all([
+    courtListenerMatches(brand, item, purchaseIds, { minConfidence }),
+    webMatches(brand, item, purchaseIds, { minConfidence }),
+  ]);
+
+  const merged = dedupe([...clMatches, ...wMatches]);
+  for (const m of merged) {
+    emit({
+      type: "match",
+      brand: m.brand,
+      source: m.source,
+      title: m.title,
+      url: m.url,
+      claimUrl: m.claimUrl,
+      active: m.active,
+      stage: m.stage,
+      claimPotential: m.claimPotential,
+      confidence: m.confidence,
+      summary: m.summary,
+      whyQualified: m.whyQualified,
+      uncertainties: m.uncertainties,
+    });
+  }
+  return merged;
 }
 
 /** Drop near-duplicate lawsuits (e.g. the same case found via both sources).
@@ -98,65 +195,58 @@ function dedupe(matches: ClassActionMatch[]): ClassActionMatch[] {
   );
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Demo run that mirrors the REAL flow's event sequence — a scan phase with
+ *  purchases streaming in one by one, then live matching — instead of jumping
+ *  straight to results. Same events as runWorkflow, just sourced from canned
+ *  purchases. Feels faster (progressive feedback) and is true to how a real
+ *  Gmail scan looks. */
+export async function runDemo(
+  emit: Emit,
+  opts: { userId: string; purchases: BrandPurchase[]; minConfidence?: number },
+): Promise<void> {
+  const { userId, purchases, minConfidence } = opts;
+
+  emit({ type: "status", step: "gmail", message: "Scanning your inbox for receipts…" });
+  await sleep(250);
+  emit({ type: "status", step: "gmail", message: `Found ${purchases.length} receipt-like emails.` });
+
+  for (let i = 0; i < purchases.length; i++) {
+    await sleep(160);
+    emit({ type: "gmail_scanning", scanned: i + 1, total: purchases.length });
+    emit({ type: "purchase_found", purchase: purchases[i] });
+  }
+
+  emit({
+    type: "status",
+    step: "extract",
+    message: `Extracted ${purchases.length} purchases; matching…`,
+  });
+
+  await matchPurchases(emit, { userId, purchases, minConfidence });
+}
+
 /** The per-product class-action lookup half of the pipeline (CourtListener +
- *  web). Reused by the real Gmail workflow and the demo route. */
+ *  web). Used by the demo route, which supplies all purchases up front. Brands
+ *  are analysed with bounded concurrency. */
 export async function matchPurchases(
   emit: Emit,
   opts: { userId: string; purchases: BrandPurchase[]; minConfidence?: number },
 ): Promise<void> {
   const { userId, purchases, minConfidence = 0.5 } = opts;
+  const sources = braveConfigured() ? "CourtListener + web" : "CourtListener";
 
   await savePurchases(
     userId,
     purchases.map((p) => ({ ...p, user_id: userId }) as StoredPurchase),
   );
 
-  const all: ClassActionMatch[] = [];
+  const runBrand = limiter(BRAND_CONCURRENCY);
   const groups = [...groupByBrand(purchases).values()];
-  const sources = braveConfigured() ? "CourtListener + web" : "CourtListener";
-
-  // Analyse brands in parallel (bounded) instead of one at a time — a grocery
-  // order can yield dozens of distinct brands, and each brand's lookup is
-  // independent. Each brand still runs its two discovery sources concurrently.
-  const BRAND_CONCURRENCY = 4;
-  for (let i = 0; i < groups.length; i += BRAND_CONCURRENCY) {
-    const batch = groups.slice(i, i + BRAND_CONCURRENCY);
-    const batchResults = await Promise.all(
-      batch.map(async (group) => {
-        const brand = group[0].brand || group[0].merchant;
-        const item = group.map((p) => p.item).join(", ");
-        const purchaseIds = group.map((p) => p.id);
-
-        emit({ type: "brand_lookup", brand, message: `Searching ${sources} for “${item}”…` });
-
-        const [clMatches, wMatches] = await Promise.all([
-          courtListenerMatches(brand, item, purchaseIds, { minConfidence }),
-          webMatches(brand, item, purchaseIds, { minConfidence }),
-        ]);
-
-        const merged = dedupe([...clMatches, ...wMatches]);
-        for (const m of merged) {
-          emit({
-            type: "match",
-            brand: m.brand,
-            source: m.source,
-            title: m.title,
-            url: m.url,
-            claimUrl: m.claimUrl,
-            active: m.active,
-            stage: m.stage,
-            claimPotential: m.claimPotential,
-            confidence: m.confidence,
-            summary: m.summary,
-            whyQualified: m.whyQualified,
-            uncertainties: m.uncertainties,
-          });
-        }
-        return merged;
-      }),
-    );
-    for (const merged of batchResults) all.push(...merged);
-  }
+  const all = (
+    await Promise.all(groups.map((g) => runBrand(() => analyzeBrand(emit, g, minConfidence, sources))))
+  ).flat();
 
   const matches = dedupe(all);
   await saveMatches(userId, matches);

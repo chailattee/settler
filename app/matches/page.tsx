@@ -6,14 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check,
   X,
-  Undo2,
-  Sparkles,
-  PartyPopper,
+  ArrowUUpLeft,
+  Sparkle,
+  Confetti,
   ArrowRight,
-  Loader2,
-  ScanSearch,
-  TriangleAlert,
-} from "lucide-react";
+  CircleNotch,
+  MagnifyingGlass,
+  Warning,
+} from "@phosphor-icons/react/dist/ssr";
 
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -127,7 +127,7 @@ export default function MatchesPage() {
         {/* Header */}
         <header className="mb-8 space-y-3">
           <p className="text-eyebrow flex items-center gap-1.5 uppercase text-muted-foreground">
-            <Sparkles className="size-3.5 text-primary" />
+            <Sparkle className="size-3.5 text-primary" />
             Verify your matches
           </p>
           <h1 className="text-headline text-foreground">
@@ -226,7 +226,7 @@ export default function MatchesPage() {
                     aria-label="Skip this match"
                     className="flex size-16 items-center justify-center rounded-full border border-border bg-card text-destructive shadow-md transition-all hover:scale-105 hover:border-destructive/40 hover:bg-destructive/10 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
                   >
-                    <X className="size-7" strokeWidth={2.5} />
+                    <X className="size-7" weight="bold" />
                   </button>
 
                   <Button
@@ -236,7 +236,7 @@ export default function MatchesPage() {
                     disabled={history.length === 0 || !!flyDir}
                     className="text-muted-foreground"
                   >
-                    <Undo2 className="size-4" />
+                    <ArrowUUpLeft className="size-4" />
                     Undo
                   </Button>
 
@@ -247,7 +247,7 @@ export default function MatchesPage() {
                     aria-label="Queue this claim"
                     className="flex size-16 items-center justify-center rounded-full bg-chart-3 text-white shadow-md transition-all hover:scale-105 hover:brightness-105 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
                   >
-                    <Check className="size-7" strokeWidth={2.5} />
+                    <Check className="size-7" weight="bold" />
                   </button>
                 </div>
 
@@ -270,7 +270,7 @@ export default function MatchesPage() {
 function LoadingState() {
   return (
     <div className="mx-auto flex h-[34rem] max-w-[26rem] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/20 text-muted-foreground">
-      <Loader2 className="size-6 animate-spin text-primary" />
+      <CircleNotch className="size-6 animate-spin text-primary" />
       <p className="text-sm">Loading your matches…</p>
     </div>
   );
@@ -280,7 +280,7 @@ function ErrorState() {
   return (
     <div className="mx-auto flex h-[34rem] max-w-[26rem] flex-col items-center justify-center gap-4 rounded-xl border border-border bg-card px-8 text-center">
       <span className="grid size-14 place-items-center rounded-full bg-destructive/10 text-destructive">
-        <TriangleAlert className="size-7" />
+        <Warning className="size-7" />
       </span>
       <div className="space-y-1">
         <h2 className="text-card-title">Couldn&apos;t load matches</h2>
@@ -290,7 +290,7 @@ function ErrorState() {
       </div>
       <Button asChild variant="outline">
         <Link href="/scan">
-          <ScanSearch className="size-4" />
+          <MagnifyingGlass className="size-4" />
           Run a scan
         </Link>
       </Button>
@@ -302,7 +302,7 @@ function NoMatchesState() {
   return (
     <div className="mx-auto flex h-[34rem] max-w-[26rem] flex-col items-center justify-center gap-4 rounded-xl border border-border bg-card px-8 text-center shadow-sm">
       <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
-        <ScanSearch className="size-7" />
+        <MagnifyingGlass className="size-7" />
       </span>
       <div className="space-y-1">
         <h2 className="text-card-title">No matches yet</h2>
@@ -343,7 +343,7 @@ function EmptyState({
         transition={{ type: "spring", stiffness: 300, damping: 18, delay: 0.1 }}
         className="mb-5 flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary"
       >
-        <PartyPopper className="size-8" />
+        <Confetti className="size-8" />
       </motion.div>
 
       <h2 className="text-card-title text-foreground">All caught up</h2>

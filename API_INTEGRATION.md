@@ -53,7 +53,7 @@ Request body (all optional):
 ```jsonc
 {
   "demo": false,        // true (or no Gmail connection) => canned purchases
-  "maxEmails": 200,     // Gmail scan cap (default 200)
+  "maxEmails": 100,     // Gmail scan cap (default 100)
   "minConfidence": 0.5  // threshold to keep a match (both sources)
 }
 ```
@@ -71,6 +71,23 @@ Purchases scanned for the current user (or `demo`).
 ### `GET /api/matches` → `{ matches: StoredMatch[] }`
 
 Class-action matches found for the current user. Feeds the swipe deck.
+
+### `POST /api/claims` `{ matchId }` → `{ claim, requiredFields }`
+
+Prepares a claim for a matched lawsuit: discovers where to act and autofills it.
+Never submits. The `claim` has `submitType` (`claim` = open settlement form,
+`interest` = law-firm sign-up for an ongoing case, `watch` = nothing yet),
+`submitUrl`, `status`, `instructions`, `deadline`, `enteredData` (`{label,value,
+source}[]` — the autofilled fields), and `missing` (labels the user must supply).
+
+### `GET /api/claims` → `{ claims: ClaimRow[] }`
+
+The user's queued claims (feeds the claims tab).
+
+### `GET /api/profile` · `POST /api/profile` `{ name?, email?, phone?, address? }`
+
+The autofill identity used to fill claim forms. GET falls back to the session
+name/email when no profile is saved.
 
 ---
 

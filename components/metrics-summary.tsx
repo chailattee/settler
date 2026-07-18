@@ -1,12 +1,12 @@
 import {
   Receipt,
   Wallet,
-  Building2,
-  Scale,
+  Buildings,
+  Scales,
   Gavel,
   Globe,
   Target,
-} from "lucide-react";
+} from "@phosphor-icons/react/dist/ssr";
 import { cn, usd } from "@/lib/utils";
 import type { Metrics } from "@/lib/metrics";
 
@@ -71,7 +71,7 @@ export function MetricsSummary({ metrics }: { metrics: Metrics }) {
           sub="across your receipts"
         />
         <StatTile
-          icon={Scale}
+          icon={Scales}
           label="Lawsuits found"
           value={lawsuitCount}
           sub={`${activeCount} active`}
@@ -102,7 +102,7 @@ export function MetricsSummary({ metrics }: { metrics: Metrics }) {
           )}
           {topBrands.length > 0 && (
             <span className="flex items-center gap-1.5 text-muted-foreground">
-              <Building2 className="size-4" />
+              <Buildings className="size-4" />
               Top:{" "}
               <span className="font-medium text-foreground">
                 {topBrands

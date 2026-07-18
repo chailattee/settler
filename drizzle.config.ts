@@ -21,4 +21,8 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL ?? "",
   },
+  // Only manage OUR tables. Without this, drizzle-kit push would try to
+  // reconcile (and offer to drop) every other table in the public schema —
+  // e.g. auth tables or anything the UI side created. Never let it.
+  tablesFilter: ["purchases", "class_action_matches", "profiles", "claims"],
 });

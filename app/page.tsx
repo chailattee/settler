@@ -1,4 +1,21 @@
 import Link from "next/link";
+import {
+  Coins,
+  MapTrifold,
+  Gavel,
+  PencilSimpleLine,
+  ShieldCheck,
+  Lock,
+  Trash,
+  LockKeyOpen,
+  Package,
+  Repeat,
+  Anchor,
+  Paperclip,
+  Check,
+  ArrowRight,
+} from "@phosphor-icons/react/dist/ssr";
+import type { Icon } from "@phosphor-icons/react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { ConnectGmailButton } from "@/components/connect-gmail-button";
@@ -7,59 +24,51 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { usd } from "@/lib/utils";
 
-function Glyph({ children, className }: { children: string; className?: string }) {
-  return (
-    <span aria-hidden="true" className={className}>
-      {children}
-    </span>
-  );
-}
-
-const steps = [
+const steps: { icon: Icon; title: string; body: string }[] = [
   {
-    icon: "🗺️",
+    icon: MapTrifold,
     title: "Chart your inbox",
     body: "Read-only Gmail access surfaces receipts and order confirmations. We keep the purchase facts and discard the emails.",
   },
   {
-    icon: "🏴‍☠️",
+    icon: Gavel,
     title: "Find the bounties",
     body: "Research agents read each open class action and check its eligibility rules against what you actually bought.",
   },
   {
-    icon: "🪙",
+    icon: Coins,
     title: "Verify each haul",
     body: "Review every match on a card deck: why you qualify, the evidence, and any doubts. Swipe right to queue the claim.",
   },
   {
-    icon: "✍️",
+    icon: PencilSimpleLine,
     title: "We file, you sign",
     body: "An agent fills the official claim form for you and stops at the certification page. You put ink to the ledger.",
   },
 ];
 
-const guardrails = [
+const guardrails: { icon: Icon; title: string; body: string }[] = [
   {
-    icon: "✋",
+    icon: ShieldCheck,
     title: "You sign the ledger",
     body: "The agent never checks an attestation box or clicks submit. Claims are signed under penalty of perjury, and that is yours alone.",
   },
   {
-    icon: "🔒",
+    icon: Lock,
     title: "Read-only Gmail",
     body: "We request the gmail.readonly scope and search only receipt-like mail. No full-inbox dump, no sending, no deleting.",
   },
   {
-    icon: "🧹",
+    icon: Trash,
     title: "Emails aren't kept",
     body: "Raw messages are parsed into purchase records and then discarded. We keep the facts we need, nothing more.",
   },
 ];
 
-const haul = [
-  { icon: "🔓", label: "Data-breach claims", note: "no proof" },
-  { icon: "📦", label: "Product defects", note: "$5–900" },
-  { icon: "🔁", label: "Subscription fees", note: "$10–120" },
+const haul: { icon: Icon; label: string; note: string }[] = [
+  { icon: LockKeyOpen, label: "Data-breach claims", note: "no proof" },
+  { icon: Package, label: "Product defects", note: "$5–900" },
+  { icon: Repeat, label: "Subscription fees", note: "$10–120" },
 ];
 
 export default function Home() {
@@ -78,7 +87,7 @@ export default function Home() {
             <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
               <div className="flex flex-col items-start">
                 <Badge variant="accent" className="mb-5">
-                  <Glyph>🪙</Glyph>
+                  <Coins className="size-3.5" weight="fill" />
                   $8.7B in treasure goes unclaimed yearly
                 </Badge>
                 <h1 className="text-display-md sm:text-display-lg text-balance">
@@ -94,7 +103,7 @@ export default function Home() {
                 <div className="mt-8 flex flex-col items-start gap-3">
                   <ConnectGmailButton label="Connect Gmail, chart my inbox" />
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Glyph>🔒</Glyph>
+                    <Lock className="size-3.5" />
                     Read-only access. Receipts and orders only. We never send
                     mail.
                   </p>
@@ -104,7 +113,7 @@ export default function Home() {
                   {["Receipts, not spam", "8 open settlements", "No filing fees"].map(
                     (item) => (
                       <span key={item} className="flex items-center gap-1.5">
-                        <Glyph className="text-chart-3">✓</Glyph>
+                        <Check className="size-4 text-chart-3" weight="bold" />
                         {item}
                       </span>
                     ),
@@ -137,9 +146,9 @@ export default function Home() {
                           key={row.label}
                           className="flex items-center gap-3 rounded-lg border border-border/70 bg-background/60 px-3 py-2.5"
                         >
-                          <Glyph className="grid size-8 shrink-0 place-items-center rounded-md bg-accent text-lg">
-                            {row.icon}
-                          </Glyph>
+                          <span className="grid size-8 shrink-0 place-items-center rounded-md bg-accent text-accent-foreground">
+                            <row.icon className="size-4" />
+                          </span>
                           <p className="min-w-0 flex-1 truncate text-sm font-medium">
                             {row.label}
                           </p>
@@ -176,9 +185,9 @@ export default function Home() {
                 <Card key={step.title} className="h-full">
                   <CardContent className="flex h-full flex-col p-5">
                     <div className="flex items-center justify-between">
-                      <Glyph className="grid size-10 place-items-center rounded-lg bg-primary/15 text-xl">
-                        {step.icon}
-                      </Glyph>
+                      <span className="grid size-10 place-items-center rounded-lg bg-primary/15 text-primary">
+                        <step.icon className="size-5" />
+                      </span>
                       <span className="text-eyebrow font-mono text-muted-foreground">
                         0{i + 1}
                       </span>
@@ -215,9 +224,9 @@ export default function Home() {
                 <Badge>Recommended</Badge>
               </div>
               <CardContent className="flex h-full flex-col p-6">
-                <Glyph className="grid size-11 place-items-center rounded-lg bg-primary text-xl shadow-coin">
-                  ⚓
-                </Glyph>
+                <span className="grid size-11 place-items-center rounded-lg bg-primary text-primary-foreground shadow-coin">
+                  <Anchor className="size-5" />
+                </span>
                 <h3 className="text-card-title mt-4">Connect Gmail</h3>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   We search receipt-like mail (order confirmations, invoices)
@@ -232,9 +241,9 @@ export default function Home() {
 
             <Card>
               <CardContent className="flex h-full flex-col p-6">
-                <Glyph className="grid size-11 place-items-center rounded-lg bg-secondary text-xl">
-                  📎
-                </Glyph>
+                <span className="grid size-11 place-items-center rounded-lg bg-secondary text-secondary-foreground">
+                  <Paperclip className="size-5" />
+                </span>
                 <h3 className="text-card-title mt-4">Upload receipts</h3>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   A fallback for anything not in your inbox. PDFs, photos, and
@@ -265,9 +274,9 @@ export default function Home() {
                   key={g.title}
                   className="rounded-xl border border-border bg-card p-6"
                 >
-                  <Glyph className="grid size-10 place-items-center rounded-lg bg-chart-3/15 text-xl">
-                    {g.icon}
-                  </Glyph>
+                  <span className="grid size-10 place-items-center rounded-lg bg-chart-3/15 text-chart-3">
+                    <g.icon className="size-5" />
+                  </span>
                   <h3 className="mt-4 font-serif text-xl">{g.title}</h3>
                   <p className="mt-1.5 text-sm text-muted-foreground">
                     {g.body}
@@ -298,7 +307,7 @@ export default function Home() {
                 href="/scan?demo=1"
                 className="inline-flex h-12 items-center gap-2 rounded-lg border border-border px-6 text-base font-medium transition-colors hover:bg-muted"
               >
-                See a demo run <Glyph>→</Glyph>
+                See a demo run <ArrowRight className="size-4" />
               </Link>
             </div>
           </div>

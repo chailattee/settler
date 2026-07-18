@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Clock, Loader2, PenLine } from "lucide-react";
+import { CheckCircle, Clock, CircleNotch, PencilSimpleLine } from "@phosphor-icons/react/dist/ssr";
 import { Badge } from "@/components/ui/badge";
 import type { ClaimStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -23,13 +23,13 @@ interface StatusMeta {
 
 export const statusMeta: Record<ClaimStatus, StatusMeta> = {
   queued: { label: "Queued", variant: "secondary", Icon: Clock },
-  filling: { label: "Filling", variant: "default", Icon: Loader2, spin: true },
+  filling: { label: "Filling", variant: "default", Icon: CircleNotch, spin: true },
   awaiting_approval: {
     label: "Needs your signature",
     variant: "warning",
-    Icon: PenLine,
+    Icon: PencilSimpleLine,
   },
-  submitted: { label: "Submitted", variant: "success", Icon: CheckCircle2 },
+  submitted: { label: "Submitted", variant: "success", Icon: CheckCircle },
 };
 
 export function StatusBadge({

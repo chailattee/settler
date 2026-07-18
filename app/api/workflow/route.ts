@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { getGoogleAccessToken } from "@/lib/gmail";
-import { runWorkflow, matchPurchases } from "@/lib/workflow";
+import { runWorkflow, runDemo } from "@/lib/workflow";
 import { sseResponse } from "@/lib/events";
 import { DEMO_PURCHASES } from "@/lib/demo";
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
           message: "No Gmail connection — running with demo purchases.",
         });
       }
-      await matchPurchases(emit, {
+      await runDemo(emit, {
         userId,
         purchases: DEMO_PURCHASES,
         minConfidence: body.minConfidence,

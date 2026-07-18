@@ -19,24 +19,52 @@ interface ChatOpts {
   maxTokens?: number;
 }
 
+/** Global concurrency gate for LLM calls. Extraction and lawsuit analysis now
+ *  run in parallel and overlap, which could otherwise fire dozens of requests
+ *  at once and trip OpenRouter rate limits. This caps total in-flight calls
+ *  across the whole workflow so we stay fast but bounded. */
+const MAX_CONCURRENT = 12;
+let active = 0;
+const waiters: (() => void)[] = [];
+
+async function acquire(): Promise<void> {
+  if (active < MAX_CONCURRENT) {
+    active++;
+    return;
+  }
+  await new Promise<void>((resolve) => waiters.push(resolve));
+}
+
+function release(): void {
+  const next = waiters.shift();
+  if (next) next(); // hand the slot straight to the next waiter (active unchanged)
+  else active--;
+}
+
 async function call(messages: ChatMessage[], opts: ChatOpts, responseFormat?: unknown) {
-  const res = await fetch(BASE, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.openrouterKey()}`,
-      "Content-Type": "application/json",
-      // Optional attribution headers OpenRouter recommends.
-      "HTTP-Referer": "http://localhost:3000",
-      "X-Title": "Settlers",
-    },
-    body: JSON.stringify({
-      model: opts.model ?? env.openrouterModel(),
-      messages,
-      temperature: opts.temperature ?? 0.2,
-      max_tokens: opts.maxTokens ?? 2048,
-      ...(responseFormat ? { response_format: responseFormat } : {}),
-    }),
-  });
+  await acquire();
+  let res: Response;
+  try {
+    res = await fetch(BASE, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.openrouterKey()}`,
+        "Content-Type": "application/json",
+        // Optional attribution headers OpenRouter recommends.
+        "HTTP-Referer": "http://localhost:3000",
+        "X-Title": "Settlers",
+      },
+      body: JSON.stringify({
+        model: opts.model ?? env.openrouterModel(),
+        messages,
+        temperature: opts.temperature ?? 0.2,
+        max_tokens: opts.maxTokens ?? 2048,
+        ...(responseFormat ? { response_format: responseFormat } : {}),
+      }),
+    });
+  } finally {
+    release();
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");

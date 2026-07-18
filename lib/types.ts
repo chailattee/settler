@@ -57,10 +57,19 @@ export type ClaimStatus =
   | "awaiting_approval"
   | "submitted";
 
+/** Icon key for a filing step, mapped to a Phosphor icon in the filmstrip. */
+export type ClaimStepIcon =
+  | "globe"
+  | "contact"
+  | "receipt"
+  | "sign"
+  | "ticket"
+  | "calendar";
+
 export interface ClaimStep {
   label: string;
-  /** Emoji stand-in for a screenshot in the mock filmstrip. */
-  thumb: string;
+  /** Which icon represents this step in the filmstrip. */
+  thumb: ClaimStepIcon;
   done: boolean;
 }
 

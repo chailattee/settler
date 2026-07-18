@@ -2,11 +2,11 @@
 
 import { motion } from "framer-motion";
 import {
-  Bot,
-  CheckCircle2,
-  Loader2,
+  Robot,
+  CheckCircle,
+  CircleNotch,
   PlayCircle,
-} from "lucide-react";
+} from "@phosphor-icons/react/dist/ssr";
 import type { ClaimRun } from "@/lib/types";
 import { getSettlement } from "@/lib/mock-data";
 import {
@@ -57,8 +57,8 @@ export function FilingViewer({
       {run.status === "filling" && (
         <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
           <div className="relative grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Bot className="size-5" />
-            <Loader2 className="absolute -right-1 -bottom-1 size-4 animate-spin text-primary" />
+            <Robot className="size-5" />
+            <CircleNotch className="absolute -right-1 -bottom-1 size-4 animate-spin text-primary" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground">
@@ -97,7 +97,7 @@ export function FilingViewer({
       {run.status === "submitted" && (
         <div className="flex items-center gap-3 rounded-xl border border-chart-3/40 bg-chart-3/5 px-4 py-3">
           <div className="grid size-9 place-items-center rounded-lg bg-chart-3/15 text-chart-3">
-            <CheckCircle2 className="size-5" />
+            <CheckCircle className="size-5" />
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">

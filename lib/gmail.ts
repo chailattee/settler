@@ -10,28 +10,33 @@ import { auth } from "@/lib/auth";
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
-/** Search query that targets purchases without dumping the whole inbox.
+/** Priority-ordered Gmail queries. We fill the scan quota from the highest-
+ *  signal source first so we pull the *relevant* emails, not the inbox:
  *
- *  `category:purchases` is Gmail's own ML classification of order/receipt/
- *  shipping emails — by far the highest-signal source. The keyword and sender
- *  clauses are recall fallbacks for anything Gmail didn't categorise. We bias
- *  toward recall (catch more) because the LLM extractor drops non-purchases
- *  downstream (isPurchase=false). */
-export const RECEIPT_QUERY = [
+ *    1. Gmail's own "purchases" ML category — order/receipt/shipping emails.
+ *    2. Known US retailers / marketplaces / delivery apps that send itemised
+ *       receipts listing the actual products (Instacart, Walmart, DoorDash…).
+ *    3. Keyword/sender fallback — only runs if the first two don't fill `max`.
+ *
+ *  Recall-biased because the LLM extractor drops non-purchases downstream
+ *  (isPurchase=false), but tiering means we never waste the budget on marketing
+ *  noise while real receipts exist. */
+export const RECEIPT_QUERIES = [
   "category:purchases",
-  'subject:(receipt OR invoice OR "order confirmation" OR "your order" OR "order #" ' +
-    'OR "order placed" OR "order number" OR purchase OR payment OR transaction OR shipped ' +
-    'OR "your invoice" OR "tax invoice" OR "thank you for your order" OR "thanks for your order" ' +
-    'OR "your receipt" OR "payment received" OR "you paid" OR "items found" OR "order delivered")',
-  "from:(orders OR receipts OR noreply OR no-reply OR auto-confirm OR invoice OR billing OR store OR shop)",
-  // Major US retailers / marketplaces / delivery services — these send the
-  // itemised receipts we care about (Instacart/Walmart/DoorDash list products).
   "from:(instacart OR walmart OR doordash OR amazon OR target OR costco OR kroger " +
     'OR "uber eats" OR ubereats OR grubhub OR shipt OR chewy OR "best buy" OR bestbuy ' +
     "OR apple OR paypal OR ebay OR etsy OR wholefoods OR safeway OR cvs OR walgreens " +
-    "OR homedepot OR lowes OR wayfair OR nike OR sephora OR ulta)",
-  "has:attachment filename:(pdf OR receipt OR invoice)",
-].join(" OR ");
+    "OR homedepot OR lowes OR wayfair OR nike OR sephora OR ulta OR seamless OR postmates)",
+  'subject:(receipt OR invoice OR "order confirmation" OR "your order" OR "order #" ' +
+    'OR "order placed" OR "order number" OR purchase OR "items found" OR "order delivered" ' +
+    'OR "your invoice" OR "tax invoice" OR "thank you for your order" OR "your receipt" ' +
+    'OR "payment received" OR "you paid") ' +
+    "OR from:(orders OR receipts OR noreply OR no-reply OR auto-confirm OR billing) " +
+    "OR has:attachment filename:(pdf OR receipt OR invoice)",
+];
+
+/** Kept for backwards-compat / callers wanting a single query. */
+export const RECEIPT_QUERY = RECEIPT_QUERIES.join(" OR ");
 
 export interface GmailMessage {
   id: string;
@@ -67,26 +72,31 @@ async function gfetch(token: string, path: string): Promise<Response> {
 
 /** List message ids matching the receipt query, capped at `max`. Pages through
  *  results (Gmail returns up to 100 ids per page) until `max` is reached. */
-export async function listReceiptIds(token: string, max = 200): Promise<string[]> {
-  const ids: string[] = [];
-  let pageToken = "";
-  while (ids.length < max) {
-    const params = new URLSearchParams({
-      q: RECEIPT_QUERY,
-      maxResults: String(Math.min(100, max - ids.length)),
-    });
-    if (pageToken) params.set("pageToken", pageToken);
-    const res = await gfetch(token, `/messages?${params}`);
-    if (!res.ok) throw new Error(`Gmail list ${res.status}: ${await res.text()}`);
-    const data = (await res.json()) as {
-      messages?: { id: string }[];
-      nextPageToken?: string;
-    };
-    for (const m of data.messages ?? []) ids.push(m.id);
-    if (!data.nextPageToken) break;
-    pageToken = data.nextPageToken;
+export async function listReceiptIds(token: string, max = 100): Promise<string[]> {
+  const seen = new Set<string>();
+  // Run the priority tiers in order, deduping ids, until we hit `max`. Higher
+  // tiers (purchases category, known merchants) get first claim on the budget.
+  for (const query of RECEIPT_QUERIES) {
+    if (seen.size >= max) break;
+    let pageToken = "";
+    while (seen.size < max) {
+      const params = new URLSearchParams({
+        q: query,
+        maxResults: String(Math.min(100, max - seen.size)),
+      });
+      if (pageToken) params.set("pageToken", pageToken);
+      const res = await gfetch(token, `/messages?${params}`);
+      if (!res.ok) throw new Error(`Gmail list ${res.status}: ${await res.text()}`);
+      const data = (await res.json()) as {
+        messages?: { id: string }[];
+        nextPageToken?: string;
+      };
+      for (const m of data.messages ?? []) seen.add(m.id);
+      if (!data.nextPageToken) break;
+      pageToken = data.nextPageToken;
+    }
   }
-  return ids.slice(0, max);
+  return [...seen].slice(0, max);
 }
 
 interface Part {
@@ -116,7 +126,12 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-/** Walk the MIME tree, preferring text/plain, falling back to stripped HTML. */
+/** Walk the MIME tree and return the richest text body.
+ *
+ *  We prefer whichever of text/plain vs stripped-HTML is LONGER. Itemised
+ *  receipts (Instacart, Walmart, DoorDash) frequently ship a sparse text/plain
+ *  summary ("9 items — $42.10") while the actual product list lives only in the
+ *  HTML part — so blindly preferring text/plain loses every product name. */
 function extractBody(payload: Part): string {
   let plain = "";
   let html = "";
@@ -126,8 +141,10 @@ function extractBody(payload: Part): string {
     for (const child of p.parts ?? []) walk(child);
   };
   walk(payload);
-  const body = plain.trim() || stripHtml(html);
-  return body.slice(0, 8000); // keep LLM prompts bounded
+  const stripped = stripHtml(html);
+  const trimmedPlain = plain.trim();
+  const body = stripped.length >= trimmedPlain.length ? stripped : trimmedPlain;
+  return body.slice(0, 16000); // keep LLM prompts bounded, but fit long receipts
 }
 
 /** Fetch and parse a single message into a compact record. */
@@ -151,7 +168,7 @@ export async function getMessage(token: string, id: string): Promise<GmailMessag
 }
 
 /** Full scan: list receipt ids then fetch each message (bounded concurrency). */
-export async function scanReceipts(token: string, max = 200): Promise<GmailMessage[]> {
+export async function scanReceipts(token: string, max = 100): Promise<GmailMessage[]> {
   const ids = await listReceiptIds(token, max);
   const out: GmailMessage[] = [];
   const concurrency = 5;

@@ -3,13 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  CheckCircle2,
-  ChevronRight,
-  ChevronLeft,
-  ShieldAlert,
+  CheckCircle,
+  CaretRight,
+  CaretLeft,
+  ShieldWarning,
   FileText,
   Lock,
-} from "lucide-react";
+  Scales,
+  Pause,
+  ArrowLeft,
+  Check,
+} from "@phosphor-icons/react/dist/ssr";
 
 type Step = 1 | 2 | 3;
 
@@ -74,7 +78,7 @@ export default function MockClaimPage() {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span aria-hidden className="text-xl leading-none">
-              ⚖️
+              <Scales className="inline-block size-6 align-[-0.125em]" />
             </span>
             <span className="text-xs sm:text-sm font-serif tracking-wide">
               Settlement Claims Administrator
@@ -144,7 +148,11 @@ export default function MockClaimPage() {
                               : "border-neutral-400 bg-white text-neutral-500",
                         ].join(" ")}
                       >
-                        {done ? "✓" : s.n}
+                        {done ? (
+                          <Check className="inline-block size-[1em] align-[-0.125em]" />
+                        ) : (
+                          s.n
+                        )}
                       </span>
                       <span
                         className={[
@@ -194,7 +202,7 @@ export default function MockClaimPage() {
                     onClick={() => setStep((s) => (s - 1) as Step)}
                     className="inline-flex items-center gap-1 rounded-sm border border-neutral-400 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <CaretLeft className="h-4 w-4" />
                     Back
                   </button>
                 ) : (
@@ -202,7 +210,8 @@ export default function MockClaimPage() {
                     href="/"
                     className="text-sm text-slate-600 underline underline-offset-2 hover:text-slate-800"
                   >
-                    ← Back to Settlers
+                    <ArrowLeft className="inline-block size-[1em] align-[-0.125em]" />{" "}
+                    Back to Settlers
                   </Link>
                 )}
 
@@ -214,7 +223,7 @@ export default function MockClaimPage() {
                     className="inline-flex items-center gap-1 rounded-sm bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500"
                   >
                     Continue
-                    <ChevronRight className="h-4 w-4" />
+                    <CaretRight className="h-4 w-4" />
                   </button>
                 )}
                 {step === 2 && (
@@ -224,7 +233,7 @@ export default function MockClaimPage() {
                     className="inline-flex items-center gap-1 rounded-sm bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700"
                   >
                     Continue
-                    <ChevronRight className="h-4 w-4" />
+                    <CaretRight className="h-4 w-4" />
                   </button>
                 )}
                 {step === 3 && (
@@ -454,12 +463,13 @@ function StepThree({
     <div>
       {/* Hand-off annotation callout */}
       <div className="mb-5 rounded-sm bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 text-sm">
-        ⏸ Settlers&apos;s agent stopped here. Review the details and sign to
+        <Pause className="inline-block size-[1em] align-[-0.125em]" />{" "}
+        Settlers&apos;s agent stopped here. Review the details and sign to
         submit.
       </div>
 
       <h2 className="font-serif text-lg font-semibold text-neutral-900 flex items-center gap-2">
-        <ShieldAlert className="h-5 w-5 text-slate-700" />
+        <ShieldWarning className="h-5 w-5 text-slate-700" />
         Part III: Certification
       </h2>
 
@@ -541,7 +551,7 @@ function SuccessScreen({
 }) {
   return (
     <div className="text-center py-6">
-      <CheckCircle2 className="mx-auto h-16 w-16 text-green-600" />
+      <CheckCircle className="mx-auto h-16 w-16 text-green-600" />
       <h2 className="mt-4 font-serif text-2xl font-semibold text-neutral-900">
         Claim submitted
       </h2>
@@ -571,7 +581,8 @@ function SuccessScreen({
           href="/"
           className="inline-flex items-center gap-1 text-sm text-slate-700 underline underline-offset-2 hover:text-slate-900"
         >
-          ← Back to Settlers
+          <ArrowLeft className="inline-block size-[1em] align-[-0.125em]" />
+          Back to Settlers
         </Link>
       </div>
     </div>

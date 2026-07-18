@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ExternalLink, LockKeyhole, PenLine, ShieldCheck } from "lucide-react";
+import { ArrowSquareOut, LockKey, PencilSimpleLine, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import type { Settlement } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
@@ -21,7 +21,7 @@ export function ApprovalGate({ settlement }: { settlement?: Settlement }) {
 
       <div className="relative flex items-start gap-4">
         <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-          <LockKeyhole className="size-5" />
+          <LockKey className="size-5" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -44,14 +44,14 @@ export function ApprovalGate({ settlement }: { settlement?: Settlement }) {
             {isInternal ? (
               <Button asChild size="lg">
                 <Link href={href}>
-                  <ExternalLink className="size-4" />
+                  <ArrowSquareOut className="size-4" />
                   Review &amp; sign on the claim site
                 </Link>
               </Button>
             ) : (
               <Button asChild size="lg">
                 <a href={href} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="size-4" />
+                  <ArrowSquareOut className="size-4" />
                   Review &amp; sign on the claim site
                 </a>
               </Button>
@@ -69,7 +69,7 @@ export function ApprovalGate({ settlement }: { settlement?: Settlement }) {
           </div>
         </div>
 
-        <PenLine className="hidden size-5 shrink-0 text-primary/40 sm:block" />
+        <PencilSimpleLine className="hidden size-5 shrink-0 text-primary/40 sm:block" />
       </div>
     </motion.div>
   );

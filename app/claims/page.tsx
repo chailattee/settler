@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PenLine, ShieldCheck } from "lucide-react";
+import { PencilSimpleLine, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import { Navbar } from "@/components/navbar";
 import { claimRuns, getSettlement } from "@/lib/mock-data";
 import type { ClaimRun } from "@/lib/types";
@@ -137,7 +137,7 @@ function Stat({
       } ${className ?? ""}`}
     >
       <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-        {emphasis && <PenLine className="size-3.5 text-primary" />}
+        {emphasis && <PencilSimpleLine className="size-3.5 text-primary" />}
         {label}
       </dt>
       <dd

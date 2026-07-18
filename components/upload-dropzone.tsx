@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { UploadCloud, FileText, X } from "lucide-react";
+import { CloudArrowUp, FileText, X } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 
 /** Fallback evidence path: drag-and-drop receipts/statements. Visual only in
@@ -46,7 +46,7 @@ export function UploadDropzone({ className }: { className?: string }) {
         )}
       >
         <span className="grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
-          <UploadCloud className="size-6" />
+          <CloudArrowUp className="size-6" />
         </span>
         <p className="mt-4 font-medium">
           Drop receipts &amp; statements here
