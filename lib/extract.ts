@@ -59,7 +59,10 @@ const SYSTEM =
   "(e.g. 'Tide', 'Fitbit', 'Apple'); never a payment processor like " +
   "PayPal/Stripe. " +
   "merchant (store/app it was bought from, e.g. 'Walmart', 'Instacart'), " +
-  "item (short product description incl. the product's own name), amount " +
+  "item (the ACTUAL product name exactly as shown in the email, e.g. 'DASANI " +
+  "Purified Water Bottles (32 x 16.9 oz)' or 'Marketside Grade A Large Brown " +
+  "Eggs' — NEVER a generic placeholder like 'Item 1', 'Item 9', or 'Product'; " +
+  "if you cannot find a product's real name, OMIT that entry entirely), amount " +
   "(USD number, 0 if unknown), date (ISO YYYY-MM-DD, best guess from the " +
   "email). Set isPurchase=false for pure shipping/marketing/newsletter emails " +
   "with no products. Only include real purchased products.";
@@ -68,12 +71,18 @@ function idFor(msgId: string, i: number): string {
   return `p_${msgId}_${i}`;
 }
 
+/** Reject generic placeholder item names the model sometimes invents when it
+ *  can't read the real product (e.g. "Item 9", "Product 3", "Line item 1"). */
+function isPlaceholder(item: string): boolean {
+  return /^(item|product|line\s*item|order\s*item)\s*#?\s*\d*$/i.test(item.trim());
+}
+
 /** Extract purchases from a single email. */
 export async function extractFromEmail(
   msg: GmailMessage,
 ): Promise<(PurchaseRecord & { brand: string })[]> {
   const user =
-    `From: ${msg.from}\nSubject: ${msg.subject}\nDate: ${msg.date}\n\n${msg.text}`.slice(0, 8000);
+    `From: ${msg.from}\nSubject: ${msg.subject}\nDate: ${msg.date}\n\n${msg.text}`.slice(0, 16000);
 
   const { purchases } = await chatJSON<{ purchases: ExtractedPurchase[] }>(
     [
@@ -84,7 +93,7 @@ export async function extractFromEmail(
   );
 
   return purchases
-    .filter((p) => p.isPurchase && (p.brand || p.merchant) && p.item)
+    .filter((p) => p.isPurchase && (p.brand || p.merchant) && p.item && !isPlaceholder(p.item))
     .map((p, i) => ({
       id: idFor(msg.id, i),
       merchant: p.merchant || p.brand,
