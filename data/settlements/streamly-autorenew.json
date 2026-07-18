@@ -1,0 +1,19 @@
+{
+  "id": "streamly-autorenew",
+  "name": "Streamly Auto-Renewal Settlement",
+  "defendant": "Streamly Media, Inc.",
+  "summary": "Streamly allegedly auto-renewed subscriptions without the disclosures California law requires. Subscribers charged during the class period may claim a partial refund.",
+  "classPeriodStart": "2021-06-01",
+  "classPeriodEnd": "2024-12-31",
+  "qualifyingCriteria": [
+    "Was charged for a Streamly subscription renewal between Jun 1, 2021 and Dec 31, 2024",
+    "Was a California resident at the time of the charge"
+  ],
+  "proofRequired": "self_attestation",
+  "estPayoutUsd": "up to $32",
+  "deadline": "2026-08-30",
+  "eligibleStates": ["CA"],
+  "claimUrl": "https://example.com/streamly-claim",
+  "sourceUrl": "https://example.com/streamly-settlement",
+  "placeholder": true
+}

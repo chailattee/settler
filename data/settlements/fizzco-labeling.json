@@ -1,0 +1,19 @@
+{
+  "id": "fizzco-labeling",
+  "name": "FizzCo \"All Natural\" Labeling Settlement",
+  "defendant": "FizzCo Beverages LLC",
+  "summary": "FizzCo allegedly labeled sodas containing artificial ingredients as 'All Natural'. Purchasers during the class period can claim cash per household without proof, more with receipts.",
+  "classPeriodStart": "2022-03-01",
+  "classPeriodEnd": "2025-09-30",
+  "qualifyingCriteria": [
+    "Purchased any FizzCo 'All Natural' labeled beverage between Mar 1, 2022 and Sep 30, 2025",
+    "Purchase made for personal/household use, not resale"
+  ],
+  "proofRequired": "self_attestation",
+  "estPayoutUsd": "$2 per unit, up to $40",
+  "deadline": "2026-10-15",
+  "eligibleStates": [],
+  "claimUrl": "https://example.com/fizzco-claim",
+  "sourceUrl": "https://example.com/fizzco-settlement",
+  "placeholder": true
+}
