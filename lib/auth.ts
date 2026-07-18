@@ -1,14 +1,30 @@
 import { betterAuth } from "better-auth";
-import Database from "better-sqlite3";
-import path from "node:path";
+import { Pool } from "pg";
 import { GMAIL_READONLY_SCOPE } from "@/lib/constants";
 
 export { GMAIL_READONLY_SCOPE };
 
+/** Better Auth persists users, sessions, and the Google OAuth account rows
+ *  (incl. access/refresh tokens). We use the same Supabase Postgres as the rest
+ *  of the app via a raw pg Pool — a file-based SQLite can't run on Vercel's
+ *  read-only filesystem. The pool connects lazily, so importing this module is
+ *  safe at build time even when DATABASE_URL is unset. */
+const connectionString = process.env.DATABASE_URL;
+const isLocal =
+  !connectionString || /@(localhost|127\.0\.0\.1)/.test(connectionString);
+
+// Reuse a single pool across hot-reloads and serverless invocations.
+const g = globalThis as typeof globalThis & { __settlersAuthPool?: Pool };
+const pool =
+  g.__settlersAuthPool ??
+  (g.__settlersAuthPool = new Pool({
+    connectionString,
+    max: 3,
+    ssl: isLocal ? undefined : { rejectUnauthorized: false },
+  }));
+
 export const auth = betterAuth({
-  // A single file-based SQLite DB is plenty for a hackathon: it holds users,
-  // sessions, and the OAuth account rows (incl. Google access/refresh tokens).
-  database: new Database(path.join(process.cwd(), "data", "auth.db")),
+  database: pool,
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
