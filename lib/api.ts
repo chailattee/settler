@@ -156,3 +156,67 @@ export async function runWorkflow(
     }
   }
 }
+
+// --- Claims + profile -------------------------------------------------------
+
+export interface ClaimField {
+  label: string;
+  value: string;
+  source: string;
+}
+
+/** A prepared claim from GET/POST /api/claims. `submitType` drives the CTA:
+ *  claim = open settlement form, interest = law-firm sign-up, watch = nothing
+ *  actionable yet. `packet` is a copy-paste-ready block; `submitUrl` the link. */
+export interface ClaimView {
+  id: string;
+  matchId: string;
+  title: string;
+  brand: string;
+  submitType: "claim" | "interest" | "watch";
+  submitUrl: string | null;
+  status: string;
+  instructions: string;
+  deadline: string | null;
+  enteredData: ClaimField[];
+  missing: string[];
+  packet: string;
+}
+
+export async function fetchClaims(): Promise<ClaimView[]> {
+  const { claims } = await getJson<{ claims: ClaimView[] }>("/api/claims");
+  return claims ?? [];
+}
+
+/** Queue + prepare a claim for a matched lawsuit (autofill + link discovery). */
+export async function createClaim(matchId: string): Promise<ClaimView> {
+  const res = await fetch("/api/claims", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ matchId }),
+  });
+  if (!res.ok) throw new Error(`/api/claims -> ${res.status}`);
+  const { claim } = (await res.json()) as { claim: ClaimView };
+  return claim;
+}
+
+export interface Profile {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+export async function fetchProfile(): Promise<Profile> {
+  const { profile } = await getJson<{ profile: Profile }>("/api/profile");
+  return profile;
+}
+
+export async function saveProfile(patch: Partial<Profile>): Promise<void> {
+  const res = await fetch("/api/profile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`/api/profile -> ${res.status}`);
+}
