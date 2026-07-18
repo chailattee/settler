@@ -38,7 +38,13 @@ export const auth = betterAuth({
     },
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    // Long-lived, rolling session: the cookie lasts 30 days, and any visit
+    // more than a day old silently extends it, so active users stay signed in
+    // without ever re-authenticating. The cookie is persistent (survives
+    // browser restarts); a fixed BETTER_AUTH_SECRET is what keeps it valid
+    // across deploys and serverless cold starts.
+    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    updateAge: 60 * 60 * 24, // roll the expiry on activity, at most daily
     cookieCache: { enabled: true, maxAge: 60 * 5 },
   },
 });
