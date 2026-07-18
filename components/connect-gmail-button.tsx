@@ -30,7 +30,7 @@ function GoogleGlyph({ className }: { className?: string }) {
 
 export function ConnectGmailButton({
   className,
-  callbackURL = "/matches",
+  callbackURL = "/scan",
   label = "Connect Gmail",
 }: {
   className?: string;

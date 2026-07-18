@@ -1,0 +1,329 @@
+"use client";
+
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ScanSearch,
+  Mail,
+  Receipt,
+  Building2,
+  BadgeCheck,
+  Sparkles,
+  Loader2,
+  TriangleAlert,
+  ArrowRight,
+  CheckCircle2,
+} from "lucide-react";
+
+import { Navbar } from "@/components/navbar";
+import { Button } from "@/components/ui/button";
+import { runWorkflow } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import type { AgentEvent } from "@/lib/events";
+
+type FeedKind = "status" | "purchase" | "brand" | "match";
+
+interface FeedItem {
+  id: number;
+  kind: FeedKind;
+  title: string;
+  detail?: string;
+}
+
+const KIND_META: Record<
+  FeedKind,
+  { icon: typeof Mail; className: string }
+> = {
+  status: { icon: Sparkles, className: "bg-secondary text-secondary-foreground" },
+  purchase: { icon: Receipt, className: "bg-accent/50 text-accent-foreground" },
+  brand: { icon: Building2, className: "bg-muted text-muted-foreground" },
+  match: { icon: BadgeCheck, className: "bg-chart-3/15 text-chart-3" },
+};
+
+function ScanRunner() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const demo = params.get("demo") === "1";
+
+  const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [scan, setScan] = useState<{ scanned: number; total: number } | null>(
+    null,
+  );
+  const [counts, setCounts] = useState({ purchases: 0, matches: 0 });
+  const [phase, setPhase] = useState<"running" | "done" | "error">("running");
+  const [errorMsg, setErrorMsg] = useState<string>("");
+
+  const nextId = useRef(0);
+  const started = useRef(false);
+
+  function push(item: Omit<FeedItem, "id">) {
+    setFeed((f) => [{ id: nextId.current++, ...item }, ...f].slice(0, 40));
+  }
+
+  useEffect(() => {
+    // Guard against React 18/19 StrictMode double-invoke in dev.
+    if (started.current) return;
+    started.current = true;
+
+    const controller = new AbortController();
+
+    function onEvent(e: AgentEvent) {
+      switch (e.type) {
+        case "status":
+          push({ kind: "status", title: e.message });
+          break;
+        case "gmail_scanning":
+          setScan({ scanned: e.scanned, total: e.total });
+          break;
+        case "purchase_found":
+          setCounts((c) => ({ ...c, purchases: c.purchases + 1 }));
+          push({
+            kind: "purchase",
+            title: e.purchase.item,
+            detail: `${e.purchase.merchant} · ${e.purchase.brand}`,
+          });
+          break;
+        case "brand_lookup":
+          push({ kind: "brand", title: e.message, detail: e.brand });
+          break;
+        case "match":
+          setCounts((c) => ({ ...c, matches: c.matches + 1 }));
+          push({
+            kind: "match",
+            title: `Match: ${e.title}`,
+            detail: `${e.brand} · ${Math.round(e.confidence * 100)}% confidence${e.active ? " · active" : ""}`,
+          });
+          break;
+        case "done":
+          setCounts({ purchases: e.purchases, matches: e.matches });
+          setPhase("done");
+          break;
+        case "error":
+          setErrorMsg(e.message);
+          setPhase("error");
+          break;
+      }
+    }
+
+    runWorkflow(onEvent, { demo }, controller.signal).catch(
+      (err) => {
+        if (controller.signal.aborted) return;
+        setErrorMsg(err instanceof Error ? err.message : String(err));
+        setPhase("error");
+      },
+    );
+
+    return () => controller.abort();
+  }, [demo]);
+
+  const scanPct = scan && scan.total > 0 ? (scan.scanned / scan.total) * 100 : 0;
+
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-10">
+      {/* Header */}
+      <header className="mb-8 flex items-start gap-4">
+        <span
+          className={cn(
+            "grid size-12 shrink-0 place-items-center rounded-xl text-primary-foreground",
+            phase === "error" ? "bg-destructive" : "bg-primary",
+          )}
+        >
+          {phase === "running" ? (
+            <ScanSearch className="size-6 animate-pulse" />
+          ) : phase === "done" ? (
+            <CheckCircle2 className="size-6" />
+          ) : (
+            <TriangleAlert className="size-6" />
+          )}
+        </span>
+        <div className="min-w-0">
+          <p className="text-eyebrow uppercase text-muted-foreground">
+            {demo ? "Demo scan" : "Scanning your inbox"}
+          </p>
+          <h1 className="text-headline text-foreground">
+            {phase === "running"
+              ? "Finding settlements you qualify for"
+              : phase === "done"
+                ? "Scan complete"
+                : "Scan interrupted"}
+          </h1>
+        </div>
+      </header>
+
+      {/* Gmail progress */}
+      {scan ? (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Mail className="size-4" />
+              Reading receipt emails
+            </span>
+            <span className="font-medium tabular-nums">
+              {scan.scanned}/{scan.total}
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <motion.div
+              className="h-full rounded-full bg-primary"
+              initial={false}
+              animate={{ width: `${scanPct}%` }}
+              transition={{ type: "spring", stiffness: 200, damping: 30 }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {/* Live counters */}
+      <div className="mb-6 grid grid-cols-2 gap-4">
+        <Counter
+          icon={Receipt}
+          label="Purchases found"
+          value={counts.purchases}
+        />
+        <Counter icon={BadgeCheck} label="Matches" value={counts.matches} />
+      </div>
+
+      {/* Done / error banner */}
+      {phase === "done" ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex flex-col items-start gap-3 rounded-xl border border-chart-3/30 bg-chart-3/10 p-5 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="size-5 text-chart-3" />
+            <p className="text-sm">
+              Found{" "}
+              <span className="font-semibold">{counts.matches} matches</span>{" "}
+              across {counts.purchases} purchases.
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/matches">
+              Review matches
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </motion.div>
+      ) : null}
+
+      {phase === "error" ? (
+        <div className="mb-6 flex flex-col items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-5">
+          <div className="flex items-center gap-2 text-sm">
+            <TriangleAlert className="size-5 shrink-0 text-destructive" />
+            <span>
+              {errorMsg || "The scan didn't finish."} You can still review any
+              matches found so far.
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/matches">Go to matches</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href={demo ? "/scan?demo=1" : "/scan"}>Retry scan</Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Activity feed */}
+      <div className="space-y-2">
+        <p className="text-eyebrow uppercase text-muted-foreground">
+          Activity
+        </p>
+        <div className="space-y-2">
+          <AnimatePresence initial={false}>
+            {feed.map((item) => {
+              const meta = KIND_META[item.kind];
+              const Icon = meta.icon;
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 34 }}
+                  className="flex items-start gap-3 rounded-lg border border-border/70 bg-card px-3.5 py-2.5"
+                >
+                  <span
+                    className={cn(
+                      "mt-0.5 grid size-7 shrink-0 place-items-center rounded-md",
+                      meta.className,
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {item.title}
+                    </p>
+                    {item.detail ? (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {item.detail}
+                      </p>
+                    ) : null}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          {phase === "running" && feed.length === 0 ? (
+            <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3.5 py-3 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Warming up the agent…
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function Counter({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Mail;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="size-4" />
+        <span className="text-xs">{label}</span>
+      </div>
+      <motion.p
+        key={value}
+        initial={{ scale: 0.8, opacity: 0.6 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="mt-1 text-display-md tabular-nums text-foreground"
+      >
+        {value}
+      </motion.p>
+    </div>
+  );
+}
+
+export default function ScanPage() {
+  return (
+    <div className="min-h-dvh bg-background">
+      <Navbar />
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-2xl px-6 py-20 text-center text-muted-foreground">
+            <Loader2 className="mx-auto size-6 animate-spin" />
+          </div>
+        }
+      >
+        <ScanRunner />
+      </Suspense>
+    </div>
+  );
+}

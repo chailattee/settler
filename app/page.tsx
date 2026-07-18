@@ -87,7 +87,7 @@ export default function Home() {
                 </h1>
                 <p className="text-body-lg mt-5 max-w-xl text-muted-foreground">
                   Billions in class-action settlements go unclaimed every year.
-                  Claimly scans your inbox, matches you to open settlements, and
+                  Settlers scans your inbox, matches you to open settlements, and
                   files the paperwork — stopping at your signature.
                 </p>
 
@@ -302,13 +302,13 @@ export default function Home() {
               See what you&apos;re owed in about a minute
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-primary-foreground/80">
-              Connect your inbox and Claimly will surface every settlement you
+              Connect your inbox and Settlers will surface every settlement you
               likely qualify for. No filing fees, no obligation.
             </p>
             <div className="relative mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <ConnectGmailButton className="bg-background text-foreground shadow-none hover:bg-background/90" />
               <Link
-                href="/matches"
+                href="/scan?demo=1"
                 className="inline-flex h-12 items-center gap-2 rounded-lg border border-primary-foreground/30 px-6 text-base font-medium transition-colors hover:bg-primary-foreground/10"
               >
                 See a demo

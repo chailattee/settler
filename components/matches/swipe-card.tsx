@@ -11,23 +11,21 @@ import {
 import { Check, X } from "lucide-react";
 
 import { MatchCard } from "@/components/matches/match-card";
-import type { MatchResult, Settlement } from "@/lib/types";
+import type { MatchView } from "@/lib/api";
 
 export type SwipeDirection = "left" | "right";
 
 const SWIPE_THRESHOLD = 120;
 
 export function SwipeCard({
-  match,
-  settlement,
+  view,
   isTop,
   offset,
   flyOut,
   onRequestFly,
   onDecided,
 }: {
-  match: MatchResult;
-  settlement: Settlement;
+  view: MatchView;
   isTop: boolean;
   /** Stack position: 0 = top/active, 1, 2 = behind. */
   offset: number;
@@ -105,7 +103,7 @@ export function SwipeCard({
           </>
         ) : null}
 
-        <MatchCard match={match} settlement={settlement} />
+        <MatchCard view={view} />
       </div>
     </motion.div>
   );
