@@ -68,8 +68,6 @@ export function toMatchView(
     .map((id) => byId.get(id))
     .filter((p): p is PurchaseRecord => Boolean(p));
 
-  const hasPayout = m.payout_high > 0;
-
   return {
     id: m.id,
     title: m.title,
@@ -77,8 +75,8 @@ export function toMatchView(
     subtitle: m.court,
     summary: m.summary || undefined,
     confidence: m.confidence,
-    payoutLow: hasPayout ? m.payout_low : undefined,
-    payoutHigh: hasPayout ? m.payout_high : undefined,
+    // Payout logic isn't defined yet, so we don't surface it — the card leads
+    // with confidence instead. (payoutLow/High left undefined by design.)
     claimUrl: m.claim_url ?? m.url,
     deadline: m.deadline ?? undefined,
     active: m.active,

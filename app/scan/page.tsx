@@ -19,7 +19,9 @@ import {
 
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { runWorkflow } from "@/lib/api";
+import { MetricsSummary } from "@/components/metrics-summary";
+import { runWorkflow, fetchPurchases, fetchMatches } from "@/lib/api";
+import { computeMetrics, type Metrics } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type { AgentEvent } from "@/lib/events";
 
@@ -54,6 +56,7 @@ function ScanRunner() {
   const [counts, setCounts] = useState({ purchases: 0, matches: 0 });
   const [phase, setPhase] = useState<"running" | "done" | "error">("running");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
 
   const nextId = useRef(0);
   const started = useRef(false);
@@ -117,6 +120,27 @@ function ScanRunner() {
 
     return () => controller.abort();
   }, [demo]);
+
+  // Once the run completes, load persisted purchases + matches and compute
+  // metrics from the documented shapes (payout intentionally excluded).
+  useEffect(() => {
+    if (phase !== "done") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [purchases, matches] = await Promise.all([
+          fetchPurchases(),
+          fetchMatches(),
+        ]);
+        if (!cancelled) setMetrics(computeMetrics(purchases, matches));
+      } catch {
+        // metrics are a nice-to-have; ignore load failures
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase]);
 
   const scanPct = scan && scan.total > 0 ? (scan.scanned / scan.total) * 100 : 0;
 
@@ -184,6 +208,20 @@ function ScanRunner() {
         />
         <Counter icon={BadgeCheck} label="Matches" value={counts.matches} />
       </div>
+
+      {/* Metrics summary (computed from documented API data) */}
+      {phase === "done" && metrics ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <p className="text-eyebrow mb-2 uppercase text-muted-foreground">
+            What we found
+          </p>
+          <MetricsSummary metrics={metrics} />
+        </motion.div>
+      ) : null}
 
       {/* Done / error banner */}
       {phase === "done" ? (
