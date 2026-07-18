@@ -61,7 +61,40 @@ export const classActionMatches = pgTable(
   (t) => [index("matches_user_idx").on(t.userId)],
 ).enableRLS();
 
+/** The user's fillable identity — the autofill source for claim forms. */
+export const profiles = pgTable("profiles", {
+  userId: text("user_id").primaryKey(),
+  name: text("name").notNull().default(""),
+  email: text("email").notNull().default(""),
+  phone: text("phone").notNull().default(""),
+  address: text("address").notNull().default(""),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}).enableRLS();
+
+/** A queued claim/interest submission built from a match + autofill. */
+export const claims = pgTable(
+  "claims",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    matchId: text("match_id").notNull(),
+    title: text("title").notNull().default(""),
+    brand: text("brand").notNull().default(""),
+    submitType: text("submit_type").notNull().default("watch"), // claim | interest | watch
+    submitUrl: text("submit_url"),
+    status: text("status").notNull().default("awaiting_approval"), // queued|filling|awaiting_approval|submitted
+    instructions: text("instructions").notNull().default(""),
+    deadline: text("deadline"),
+    enteredData: jsonb("entered_data").$type<{ label: string; value: string; source: string }[]>().notNull().default([]),
+    missing: jsonb("missing").$type<string[]>().notNull().default([]),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("claims_user_idx").on(t.userId)],
+).enableRLS();
+
 export type PurchaseRow = typeof purchases.$inferSelect;
 export type NewPurchaseRow = typeof purchases.$inferInsert;
 export type MatchRow = typeof classActionMatches.$inferSelect;
 export type NewMatchRow = typeof classActionMatches.$inferInsert;
+export type ProfileRow = typeof profiles.$inferSelect;
+export type ClaimRow = typeof claims.$inferSelect;
