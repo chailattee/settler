@@ -2,9 +2,28 @@
 
 import { Fragment } from "react";
 import { motion } from "framer-motion";
-import { Check, ChevronRight } from "lucide-react";
-import type { ClaimStep } from "@/lib/types";
+import {
+  Check,
+  CaretRight,
+  Globe,
+  IdentificationCard,
+  Receipt,
+  PencilSimpleLine,
+  Ticket,
+  CalendarBlank,
+} from "@phosphor-icons/react/dist/ssr";
+import type { Icon } from "@phosphor-icons/react";
+import type { ClaimStep, ClaimStepIcon } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const STEP_ICON: Record<ClaimStepIcon, Icon> = {
+  globe: Globe,
+  contact: IdentificationCard,
+  receipt: Receipt,
+  sign: PencilSimpleLine,
+  ticket: Ticket,
+  calendar: CalendarBlank,
+};
 
 export function Filmstrip({ steps }: { steps: ClaimStep[] }) {
   const currentIndex = steps.findIndex((s) => !s.done);
@@ -14,6 +33,7 @@ export function Filmstrip({ steps }: { steps: ClaimStep[] }) {
       {steps.map((step, i) => {
         const isCurrent = i === currentIndex;
         const isDone = step.done;
+        const StepIcon = STEP_ICON[step.thumb];
 
         return (
           <Fragment key={`${step.label}-${i}`}>
@@ -38,11 +58,20 @@ export function Filmstrip({ steps }: { steps: ClaimStep[] }) {
                   "border-dashed border-border bg-muted/30 opacity-70",
               )}
             >
-              <span className="relative text-2xl leading-none" aria-hidden>
-                {step.thumb}
+              <span
+                className={cn(
+                  "relative grid size-9 place-items-center rounded-lg",
+                  isDone
+                    ? "bg-chart-3/15 text-chart-3"
+                    : isCurrent
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground",
+                )}
+              >
+                <StepIcon className="size-5" />
                 {isDone && (
-                  <span className="absolute -right-2 -top-1 grid size-4 place-items-center rounded-full bg-chart-3 text-background">
-                    <Check className="size-2.5" strokeWidth={3} />
+                  <span className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-chart-3 text-background">
+                    <Check className="size-2.5" weight="bold" />
                   </span>
                 )}
               </span>
@@ -67,7 +96,7 @@ export function Filmstrip({ steps }: { steps: ClaimStep[] }) {
 
             {i < steps.length - 1 && (
               <div className="flex items-center self-center">
-                <ChevronRight
+                <CaretRight
                   className={cn(
                     "size-4",
                     isDone ? "text-chart-3" : "text-muted-foreground/40",

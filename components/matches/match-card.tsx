@@ -1,12 +1,12 @@
 import {
   Check,
   FileText,
-  TriangleAlert,
-  CalendarClock,
-  Mail,
-  Upload,
+  Warning,
+  CalendarBlank,
+  EnvelopeSimple,
+  UploadSimple,
   Gavel,
-} from "lucide-react";
+} from "@phosphor-icons/react/dist/ssr";
 
 import { Badge } from "@/components/ui/badge";
 import { cn, usd } from "@/lib/utils";
@@ -135,9 +135,9 @@ export function MatchCard({ view }: { view: MatchView }) {
                     title={p.source === "gmail" ? "From Gmail" : "Uploaded"}
                   >
                     {p.source === "gmail" ? (
-                      <Mail className="size-3" />
+                      <EnvelopeSimple className="size-3" />
                     ) : (
-                      <Upload className="size-3" />
+                      <UploadSimple className="size-3" />
                     )}
                   </span>
                 </div>
@@ -150,7 +150,7 @@ export function MatchCard({ view }: { view: MatchView }) {
         {view.uncertainties.length > 0 ? (
           <div className="space-y-2 rounded-lg border border-chart-4/40 bg-chart-4/10 px-4 py-3">
             <p className="text-eyebrow flex items-center gap-1.5 uppercase text-amber-700 dark:text-amber-300">
-              <TriangleAlert className="size-3.5" />
+              <Warning className="size-3.5" />
               Worth a look
             </p>
             <ul className="space-y-1.5">
@@ -176,7 +176,7 @@ export function MatchCard({ view }: { view: MatchView }) {
       >
         {view.deadline ? (
           <>
-            <CalendarClock className="size-4 shrink-0" />
+            <CalendarBlank className="size-4 shrink-0" />
             File by{" "}
             <span className="font-medium text-foreground">
               {formatDeadline(view.deadline)}

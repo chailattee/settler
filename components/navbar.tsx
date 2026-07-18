@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { SignOut } from "@phosphor-icons/react/dist/ssr";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,7 @@ export function Navbar() {
                 onClick={() => signOut()}
                 aria-label="Sign out"
               >
-                <LogOut className="size-4" />
+                <SignOut className="size-4" />
                 <span className="hidden sm:inline">Sign out</span>
               </Button>
             </>

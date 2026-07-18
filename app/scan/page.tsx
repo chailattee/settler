@@ -5,18 +5,18 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ScanSearch,
-  Mail,
+  MagnifyingGlass,
+  EnvelopeSimple,
   Receipt,
-  Building2,
-  BadgeCheck,
-  Sparkles,
-  Loader2,
-  TriangleAlert,
+  Buildings,
+  SealCheck,
+  Sparkle,
+  CircleNotch,
+  Warning,
   ArrowRight,
-  RotateCcw,
-  CheckCircle2,
-} from "lucide-react";
+  ArrowCounterClockwise,
+  CheckCircle,
+} from "@phosphor-icons/react/dist/ssr";
 
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -37,12 +37,12 @@ interface FeedItem {
 
 const KIND_META: Record<
   FeedKind,
-  { icon: typeof Mail; className: string }
+  { icon: typeof EnvelopeSimple; className: string }
 > = {
-  status: { icon: Sparkles, className: "bg-secondary text-secondary-foreground" },
+  status: { icon: Sparkle, className: "bg-secondary text-secondary-foreground" },
   purchase: { icon: Receipt, className: "bg-accent/50 text-accent-foreground" },
-  brand: { icon: Building2, className: "bg-muted text-muted-foreground" },
-  match: { icon: BadgeCheck, className: "bg-chart-3/15 text-chart-3" },
+  brand: { icon: Buildings, className: "bg-muted text-muted-foreground" },
+  match: { icon: SealCheck, className: "bg-chart-3/15 text-chart-3" },
 };
 
 function ScanRunner() {
@@ -202,13 +202,13 @@ function ScanRunner() {
           )}
         >
           {phase === "checking" ? (
-            <Loader2 className="size-6 animate-spin" />
+            <CircleNotch className="size-6 animate-spin" />
           ) : phase === "running" ? (
-            <ScanSearch className="size-6 animate-pulse" />
+            <MagnifyingGlass className="size-6 animate-pulse" />
           ) : phase === "done" ? (
-            <CheckCircle2 className="size-6" />
+            <CheckCircle className="size-6" />
           ) : (
-            <TriangleAlert className="size-6" />
+            <Warning className="size-6" />
           )}
         </span>
         <div className="min-w-0">
@@ -238,7 +238,7 @@ function ScanRunner() {
       {/* Checking for a prior scan */}
       {phase === "checking" ? (
         <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
+          <CircleNotch className="size-4 animate-spin" />
           Checking for a previous scan…
         </div>
       ) : null}
@@ -248,7 +248,7 @@ function ScanRunner() {
         <div className="mb-6 rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2 text-muted-foreground">
-              <Mail className="size-4" />
+              <EnvelopeSimple className="size-4" />
               Reading receipt emails
             </span>
             <span className="font-medium tabular-nums">
@@ -274,7 +274,7 @@ function ScanRunner() {
             label="Purchases found"
             value={counts.purchases}
           />
-          <Counter icon={BadgeCheck} label="Matches" value={counts.matches} />
+          <Counter icon={SealCheck} label="Matches" value={counts.matches} />
         </div>
       ) : null}
 
@@ -300,7 +300,7 @@ function ScanRunner() {
           className="mb-6 flex flex-col items-start gap-3 rounded-xl border border-chart-3/30 bg-chart-3/10 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-5 text-chart-3" />
+            <CheckCircle className="size-5 text-chart-3" />
             <p className="text-sm">
               {fromCache ? "Your last scan found " : "Found "}
               <span className="font-semibold">{counts.matches} matches</span>{" "}
@@ -309,7 +309,7 @@ function ScanRunner() {
           </div>
           <div className="flex shrink-0 gap-2">
             <Button variant="outline" onClick={startRun}>
-              <RotateCcw className="size-4" />
+              <ArrowCounterClockwise className="size-4" />
               {fromCache ? "Scan again" : "Retry scan"}
             </Button>
             <Button asChild>
@@ -325,7 +325,7 @@ function ScanRunner() {
       {phase === "error" ? (
         <div className="mb-6 flex flex-col items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-5">
           <div className="flex items-center gap-2 text-sm">
-            <TriangleAlert className="size-5 shrink-0 text-destructive" />
+            <Warning className="size-5 shrink-0 text-destructive" />
             <span>
               {errorMsg || "The scan didn't finish."} You can still review any
               matches found so far.
@@ -336,7 +336,7 @@ function ScanRunner() {
               <Link href="/matches">Go to matches</Link>
             </Button>
             <Button size="sm" onClick={startRun}>
-              <RotateCcw className="size-4" />
+              <ArrowCounterClockwise className="size-4" />
               Retry scan
             </Button>
           </div>
@@ -389,7 +389,7 @@ function ScanRunner() {
 
           {phase === "running" && feed.length === 0 ? (
             <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3.5 py-3 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
+              <CircleNotch className="size-4 animate-spin" />
               Warming up the agent…
             </div>
           ) : null}
@@ -405,7 +405,7 @@ function Counter({
   label,
   value,
 }: {
-  icon: typeof Mail;
+  icon: typeof EnvelopeSimple;
   label: string;
   value: number;
 }) {
@@ -434,7 +434,7 @@ export default function ScanPage() {
       <Suspense
         fallback={
           <div className="mx-auto max-w-2xl px-6 py-20 text-center text-muted-foreground">
-            <Loader2 className="mx-auto size-6 animate-spin" />
+            <CircleNotch className="mx-auto size-6 animate-spin" />
           </div>
         }
       >

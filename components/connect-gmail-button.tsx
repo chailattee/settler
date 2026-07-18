@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { connectGmail } from "@/lib/auth-client";
 
@@ -59,7 +59,7 @@ export function ConnectGmailButton({
     >
       <span className="grid size-6 place-items-center rounded-full bg-background">
         {loading ? (
-          <Loader2 className="size-4 animate-spin text-foreground" />
+          <CircleNotch className="size-4 animate-spin text-foreground" />
         ) : (
           <GoogleGlyph className="size-4" />
         )}
