@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
-import { GMAIL_READONLY_SCOPE } from "@/lib/constants";
+import { GMAIL_READONLY_SCOPE, GMAIL_SCOPES } from "@/lib/constants";
 
 export { GMAIL_READONLY_SCOPE };
 
@@ -29,10 +29,11 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      // Request Gmail read access up front alongside profile/email, and force
+      // Request Gmail read access (receipt scan) + compose (draft follow-up
+      // emails for linkless claims) up front alongside profile/email, and force
       // Google to return a refresh token so we can re-scan later without a
       // fresh consent screen.
-      scope: [GMAIL_READONLY_SCOPE],
+      scope: GMAIL_SCOPES,
       accessType: "offline",
       prompt: "select_account consent",
     },

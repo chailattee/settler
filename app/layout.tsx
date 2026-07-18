@@ -32,9 +32,9 @@ const pirataOne = Pirata_One({
 });
 
 export const metadata: Metadata = {
-  title: "Settlers | Find the settlement money you're owed",
+  title: "Settler | Find the settlement money you're owed",
   description:
-    "Settlers charts your inbox for purchases tied to open class-action settlements, verifies each match, and fills the claim forms. You only sign at the end.",
+    "Settler charts your inbox for purchases tied to open class-action settlements, verifies each match, and fills the claim forms. You only sign at the end.",
 };
 
 export default function RootLayout({

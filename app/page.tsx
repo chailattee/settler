@@ -95,7 +95,7 @@ export default function Home() {
                   <em className="text-accent-foreground not-italic">Claim it.</em>
                 </h1>
                 <p className="text-body-lg mt-5 max-w-xl text-muted-foreground">
-                  Settlers charts your inbox for purchases tied to open
+                  Settler charts your inbox for purchases tied to open
                   class-action settlements, verifies each match, and fills the
                   claim forms. You only sign at the end.
                 </p>
@@ -110,7 +110,7 @@ export default function Home() {
                 </div>
 
                 <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                  {["Receipts, not spam", "8 open settlements", "No filing fees"].map(
+                  {["Receipts, not spam", "Open settlements", "No filing fees"].map(
                     (item) => (
                       <span key={item} className="flex items-center gap-1.5">
                         <Check className="size-4 text-chart-3" weight="bold" />

@@ -178,6 +178,9 @@ export interface ClaimView {
   status: string;
   instructions: string;
   deadline: string | null;
+  /** Auto-created Gmail draft (follow-up email) for claims with no link. */
+  draftId: string | null;
+  draftUrl: string | null;
   enteredData: ClaimField[];
   missing: string[];
   packet: string;

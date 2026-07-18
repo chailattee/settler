@@ -18,7 +18,7 @@ export function Logo({
       <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-coin">
         <Compass className="size-5" weight="bold" />
       </span>
-      <span className="font-brand text-2xl leading-none">Settlers</span>
+      <span className="font-brand text-2xl leading-none">Settler</span>
     </Link>
   );
 }

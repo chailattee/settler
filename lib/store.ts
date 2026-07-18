@@ -313,6 +313,8 @@ export async function saveClaim(row: ClaimRow): Promise<void> {
           status: row.status,
           instructions: row.instructions,
           deadline: row.deadline,
+          draftId: row.draftId,
+          draftUrl: row.draftUrl,
           enteredData: row.enteredData,
           missing: row.missing,
         },
